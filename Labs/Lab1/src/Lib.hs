@@ -1,33 +1,32 @@
 module Lib
     (
-      oneOne
+      oneTwo,
+      twoTwo
     ) where
 
-oneOne :: (Eq a) => [a] -> [a]
-oneOne [] = []
-oneOne [x] = [x]
-oneOne (x:xs) = x : inner x (head xs) (tail xs)
-  where
-    inner :: (Eq a) => a -> a -> [a] -> [a]
-    inner current headElement []
-      | current == headElement = []
-      | otherwise = [headElement]
-    inner current headElement (x':xs')
-      | current == headElement = inner headElement x' xs'
-      | otherwise = headElement : inner headElement x' xs'
+import Data.List
+import Data.Ord
 
---isInside :: (Eq a) => a -> [a] -> Bool
---isInside _ [] = False
---isInside e (x:xs) = e == x || isInside e xs
---
---hasPath :: (Eq a) => (a, a) -> [(a, a)] -> Bool
---hasPath _ [] = False
---hasPath search (x:xs) = hasPathImpl search x [] xs
---
---hasPathImpl :: (Eq a) => (a, a) -> (a, a) -> [(a, a)] -> [(a, a)] -> Bool
---hasPathImpl search current _ [] = snd search == snd current
---hasPathImpl search current visited remainder
---  | snd search == snd current = True
---  | isInside current visited = hasPathImpl search (head remainder) visited (tail remainder)
---  | fst search == fst current = hasPathImpl (snd current, snd search) (head remainder) (current : visited) (tail remainder)
---  | otherwise = hasPathImpl search (head remainder) (current : visited) (tail remainder)
+oneTwo :: (Eq a) => [a] -> [(a, Int)]
+oneTwo [x] = [(x, 1)]
+oneTwo l = inner (head l) 1 (head $ tail l) (tail $ tail l)
+  where
+    inner :: (Eq a) => a -> Int -> a -> [a] -> [(a, Int)]
+    inner element count current []
+      | element == current = [(current, count + 1)]
+      | otherwise = [(element, count), (current, 1)]
+    inner element count current other
+      | element == current = inner current (count + 1) (head other) (tail other)
+      | otherwise = (element, count) : inner current 1 (head other) (tail other)
+
+
+twoTwo :: [a] -> Int -> [a]
+twoTwo l n = [e | (_, e) <- sortBy (comparing fst) indexValues]
+  where
+    len = length l
+    normalN = mod n len
+    boundIndex index
+      | index + normalN >= len = index + normalN - len
+      | index + normalN < 0 = index + normalN + len
+      | otherwise = index + normalN
+    indexValues = [(boundIndex index, e) | (index, e) <- zip [0..] l]
