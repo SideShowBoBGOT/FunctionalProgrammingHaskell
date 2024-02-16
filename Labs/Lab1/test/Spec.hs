@@ -2,50 +2,63 @@ import Lib
 
 import Test.HUnit
 
+-- Функція тестування для першого завдання.
+-- Для зручності зробив вивід номера тестового варіанта, назву
+createOneTestCases :: (Eq a, Show a) => String -> (t -> a) -> [(t, a)] -> [Test]
+createOneTestCases baseName func testCases = [TestCase (assertEqual (baseName ++ " " ++ show i) (func x) y) | (i, (x, y)) <- zip [0..] testCases]
+
+-- Тестові варіанти для першого завдання. Перший елемент кортежу - аргумент,
+-- друге - очікуване значення тесту.
+oneTenCases :: [([Int], Int)]
+oneTenCases = [
+    ([1..2], 1),
+    ([1..3], 2),
+    ([1..4], 3)
+  ]
+
+-- Створюємо тести для oneTestA
+oneTenATest :: [Test]
+oneTenATest = createOneTestCases "oneTenA" oneTenA oneTenCases
+
+-- Створюємо тести для oneTestB
+oneTenBTest :: [Test]
+oneTenBTest = createOneTestCases "oneTenB" oneTenB oneTenCases
+
+-- Тестові варіанти для другого завдання. Перший елемент кортежу -
+-- це кортеж аргументів, другий - очікуване значення тесту.
+twoTenCases :: [(([Int], Int), [Int])]
+twoTenCases = [
+    (([1, 2, 3, 4, 5], 0), [1, 2, 3, 4, 5]),
+    (([1, 2, 3, 4, 5], 1), [5, 1, 2, 3, 4]),
+    (([1, 2, 3, 4, 5], 2), [4, 5, 1, 2, 3]),
+    (([1, 2, 3, 4, 5], 3), [3, 4, 5, 1, 2]),
+    (([1, 2, 3, 4, 5], 4), [2, 3, 4, 5, 1]),
+    (([1, 2, 3, 4, 5], 5), [1, 2, 3, 4, 5]),
+    (([1, 2, 3, 4, 5], 6), [5, 1, 2, 3, 4]),
+    (([1, 2, 3, 4, 5], 7), [4, 5, 1, 2, 3]),
+    (([1, 2, 3, 4, 5], 8), [3, 4, 5, 1, 2]),
+    (([1, 2, 3, 4, 5], 9), [2, 3, 4, 5, 1]),
+    (([1, 2, 3, 4, 5], 10), [1, 2, 3, 4, 5])
+  ]
+
+-- Функція тестування для другого завдання.
+createTwoTestCases :: (Eq a, Show a) => String -> (c -> b -> a) -> [((c, b), a)] -> [Test]
+createTwoTestCases baseName func testCases = [TestCase (assertEqual (baseName ++ " " ++ show i) (func x y) z) | (i, ((x, y), z)) <- zip [0..] testCases]
+
+-- Створюємо тести для twoTenA
+twoTenATest :: [Test]
+twoTenATest = createTwoTestCases "twoTenA" twoTenA twoTenCases
+
+-- Створюємо тести для twoTenB
+twoTenBTest :: [Test]
+twoTenBTest = createTwoTestCases "twoTenB" twoTenB twoTenCases
+
+-- Створюємо тестовий список
+tests :: Test
+tests = TestList (oneTenATest ++ oneTenBTest ++ twoTenATest ++ twoTenBTest)
+
+-- Головна функція, виводить результати тестування.
 main :: IO ()
 main  = do
     result <- runTestTT tests
     print (if failures result > 0 then "Failure" else "Success")
-
-oneTwoCases :: [(String, [(Char, Int)])]
-oneTwoCases = [
-    ("aaaabbbcccbb", [('a', 4), ('b', 3), ('c', 3), ('b', 2)]),
-    ("a aa aaa aaaa", [('a', 1), (' ', 1), ('a', 2), (' ', 1), ('a', 3), (' ', 1), ('a', 4)]),
-    ("abcdefgh", [('a', 1), ('b', 1), ('c', 1), ('d', 1), ('e', 1), ('f', 1), ('g', 1), ('h', 1)])
-  ]
-
-createTestCases :: (Eq a, Show a) => [Char] -> (t -> a) -> [(t, a)] -> [Test]
-createTestCases baseName func testCases = [TestCase (assertEqual (baseName ++ " " ++ show i) y (func x)) | (i, (x, y)) <- zip [0..] testCases]
-
-twoOneCases :: [([Integer], (Int, Int, [Integer]))]
-twoOneCases = [
-    ([99, 101, 1, 2, 66], (5, 2, [99, 101, 1, 2, 66])), -- /home/sideshowbobgot/Downloads/JMeter.docx -- invalid indexes 5 > 2;
-    ([99, 101, 1, 2, 66], (-2, -1, [99, 101, 1, 2, 66])), -- x e [i; j], j < 0;
-    ([99, 101, 1, 2, 66], (5, 7, [99, 101, 1, 2, 66])), -- i > length list;
-    ([99, 101, 1, 66], (3, 3, [99, 101, 1, 2, 66])), -- i == j, i >= 0
-    ([99, 66], (1, 3, [99, 101, 1, 2, 66])), -- valid [i; j] intersect range [0; length l]
-    ([66], (-999, 3, [99, 101, 1, 2, 66])) -- valid [i; j] intersect range [0; length l]
-  ]
-
-twoTwoCases = [
-    ([5, 1, 2, 3, 4], 1),
-    ([5, 1, 2, 3, 4], 6),
-    ([5, 1, 2, 3, 4], 11),
-    ([2, 3, 4, 5, 1], -1),
-    ([2, 3, 4, 5, 1], -6),
-    ([2, 3, 4, 5, 1], -11),
-    ([1, 2, 3, 4, 5], 0),
-    ([1, 2, 3, 4, 5], 5),
-    ([1, 2, 3, 4, 5], 10),
-    ([4, 5, 1, 2, 3], 2),
-    ([4, 5, 1, 2, 3], 7),
-    ([4, 5, 1, 2, 3], 12),
-    ([3, 4, 5, 1, 2], -2),
-    ([3, 4, 5, 1, 2], -7),
-    ([3, 4, 5, 1, 2], -12)
-  ]
-
-twoTwoTests = [TestCase (assertEqual ("TwoTwo " ++ show index) expected (twoTwo [1, 2, 3, 4, 5] n)) | (index, (expected, n)) <- zip [0..] twoTwoCases]
-
-tests :: Test
-tests = TestList ((createTestCases "OneTwo" oneTwo oneTwoCases) ++ twoTwoTests)

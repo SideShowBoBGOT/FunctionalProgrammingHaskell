@@ -3,6 +3,4 @@ module Main (main) where
 import Lib
 
 main :: IO ()
-main = someFunc (1, 1, 1)
-
-someFunc x y z = print x
+main = print (oneTenA [1, 2, 3, 4, 5])

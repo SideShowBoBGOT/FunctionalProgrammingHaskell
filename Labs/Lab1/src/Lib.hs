@@ -1,32 +1,37 @@
 module Lib
     (
-      oneTwo,
-      twoTwo
+      oneTenA,
+      oneTenB,
+      twoTenA,
+      twoTenB
     ) where
 
 import Data.List
-import Data.Ord
 
-oneTwo :: (Eq a) => [a] -> [(a, Int)]
-oneTwo [x] = [(x, 1)]
-oneTwo l = inner (head l) 1 (head $ tail l) (tail $ tail l)
-  where
-    inner :: (Eq a) => a -> Int -> a -> [a] -> [(a, Int)]
-    inner element count current []
-      | element == current = [(current, count + 1)]
-      | otherwise = [(element, count), (current, 1)]
-    inner element count current other
-      | element == current = inner current (count + 1) (head other) (tail other)
-      | otherwise = (element, count) : inner current 1 (head other) (tail other)
+oneTenA :: [a] -> a
+oneTenA [] = error "empty list"
+oneTenA [_] = error "only one element"
+oneTenA [x, _] = x
+oneTenA (_:xs) = oneTenA xs
 
+oneTenB :: [a] -> a
+oneTenB xs = last (init xs)
 
-twoTwo :: [a] -> Int -> [a]
-twoTwo l n = [e | (_, e) <- sortBy (comparing fst) indexValues]
-  where
-    len = length l
-    normalN = mod n len
-    boundIndex index
-      | index + normalN >= len = index + normalN - len
-      | index + normalN < 0 = index + normalN + len
-      | otherwise = index + normalN
-    indexValues = [(boundIndex index, e) | (index, e) <- zip [0..] l]
+myLast :: [a] -> a
+myLast [] = error "empty list"
+myLast [x] = x
+myLast (_:xs) = myLast xs
+
+myInit :: [a] -> [a]
+myInit [] = error "empty list"
+myInit [_] = []
+myInit (x:xs) = x : myInit xs
+
+twoTenA :: [a] -> Int -> [a]
+twoTenA l 0 = l
+twoTenA l n = twoTenA (myLast l : myInit l) (n - 1)
+
+twoTenB :: [a] -> Int -> [a]
+twoTenB l 0 = l
+twoTenB l n = twoTenA (last l : init l) (n - 1)
+
