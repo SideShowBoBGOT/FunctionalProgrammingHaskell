@@ -20,6 +20,9 @@ oneOneATests = createOneTestCases "OneOneA" oneOneA oneOneCases
 oneOneBTests :: [Test]
 oneOneBTests = createOneTestCases "OneOneB" oneOneB oneOneCases
 
+oneOneCTests :: [Test]
+oneOneCTests = createOneTestCases "OneOneC" oneOneC oneOneCases
+
 twoOneCases :: [(([Int], Int), [Int])]
 twoOneCases = [
     (([1, 2, 3, 4, 5], 0), [1, 2, 3, 4, 5]),
@@ -49,7 +52,7 @@ twoOneBTest = createTwoTestCases "twoTenB" twoOneB twoOneCases
 
 -- Створюємо тестовий список
 tests :: Test
-tests = TestList (oneOneATests ++ oneOneBTests ++ twoOneATest ++ twoOneBTest)
+tests = TestList (oneOneATests ++ oneOneBTests ++ oneOneCTests ++ twoOneATest ++ twoOneBTest)
 
 -- Головна функція, виводить результати тестування.
 main :: IO ()

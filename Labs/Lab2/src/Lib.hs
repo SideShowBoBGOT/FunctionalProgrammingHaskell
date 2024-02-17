@@ -1,11 +1,14 @@
 module Lib
     ( oneOneA,
       oneOneB,
+      oneOneC,
       twoOneA,
       twoOneB,
       someFunc
     ) where
 
+import Data.List
+  
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
 
@@ -32,6 +35,9 @@ oneOneA (x:xs) = (x, myLength (myTakeWhile (== x) (x:xs))) : oneOneA (myDropWhil
 oneOneB :: Eq a => [a] -> [(a, Int)]
 oneOneB [] = []
 oneOneB (x:xs) = (x, length (takeWhile (== x) (x:xs))) : oneOneB (dropWhile (== x) xs)
+
+oneOneC :: Eq a => [a] -> [(a, Int)]
+oneOneC l = map (\xs@(x:_) -> (x, length xs)) $ group l 
 
 myTake :: Int -> [a] -> [a]
 myTake 0 _ = []
