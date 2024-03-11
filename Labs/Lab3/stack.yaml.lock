@@ -11,20 +11,6 @@ packages:
       size: 4255
   original:
     hackage: postgresql-simple-0.7.0.0
-- completed:
-    hackage: commandert-0.1.1.1@sha256:ece7208942b949f75ec508911d9b1269f842647ed59dc84440bc2f12a3b34df6,1232
-    pantry-tree:
-      sha256: 8f84a22eb8c9ef984b259cb803dcf4012ca022ebe7cf1bf7fd9846f2ab5a6577
-      size: 279
-  original:
-    hackage: commandert-0.1.1.1
-- completed:
-    hackage: commander-cli-0.11.0.0@sha256:5f6dd79a1b58c82e053227f513add7ce6a36d54361e5f282600c394895454fad,3158
-    pantry-tree:
-      sha256: 51e18da4190cdd08ecc33fa26cabd7f646a8f814140c4c6cbd1c01989929e6a2
-      size: 643
-  original:
-    hackage: commander-cli-0.11.0.0
 snapshots:
 - completed:
     sha256: 2fdd7d3e54540062ef75ca0a73ca3a804c527dbf8a4cadafabf340e66ac4af40

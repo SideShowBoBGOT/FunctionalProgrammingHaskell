@@ -37,7 +37,7 @@ oneOneB [] = []
 oneOneB (x:xs) = (x, length (takeWhile (== x) (x:xs))) : oneOneB (dropWhile (== x) xs)
 
 oneOneC :: Eq a => [a] -> [(a, Int)]
-oneOneC l = map (\xs@(x:_) -> (x, length xs)) $ group l 
+oneOneC l = map (\xs@(x:_) -> (x, length xs)) $ group l
 
 myTake :: Int -> [a] -> [a]
 myTake 0 _ = []

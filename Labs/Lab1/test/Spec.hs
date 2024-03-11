@@ -5,7 +5,9 @@ import Test.HUnit
 -- Функція тестування для першого завдання.
 -- Для зручності зробив вивід номера тестового варіанта, назву
 createOneTestCases :: (Eq a, Show a) => String -> (t -> a) -> [(t, a)] -> [Test]
-createOneTestCases baseName func testCases = [TestCase (assertEqual (baseName ++ " " ++ show i) (func x) y) | (i, (x, y)) <- zip [0..] testCases]
+createOneTestCases baseName func testCases = [
+  TestCase (assertEqual (baseName ++ " " ++ show i) (func x) y) | (i, (x, y)) <- zip [0..] testCases
+  ]
 
 -- Тестові варіанти для першого завдання. Перший елемент кортежу - аргумент,
 -- друге - очікуване значення тесту.

@@ -1,0 +1,1 @@
+psql -h localhost -U myuser -d mydatabase
