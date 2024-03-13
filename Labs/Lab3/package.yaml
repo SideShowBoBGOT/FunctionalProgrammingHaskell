@@ -47,7 +47,11 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - Lab3
+    - bytestring
     - optparse-applicative
+    - postgresql-simple
+    - text
+    - exceptions
 
 tests:
   Lab3-test:
