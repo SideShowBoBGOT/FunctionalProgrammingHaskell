@@ -1,4 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Main (main) where
 
@@ -10,10 +13,15 @@ import Hardcoded
 import Data.String (IsString, fromString)
 import Data.Text (Text)
 import Data.ByteString ()
-import Database.PostgreSQL.Simple (query, query_, fromOnly)
-import Database.PostgreSQL.Simple.Internal (connectHost, connectUser, connectDatabase, connectPassword, Connection, connect, defaultConnectInfo)
+import Database.PostgreSQL.Simple (
+  query, query_, fromOnly, FromRow, ToRow)
+import Database.PostgreSQL.Simple.Internal (
+  connectHost, connectUser, connectDatabase,
+  connectPassword, Connection, connect,
+  defaultConnectInfo)
 import Database.PostgreSQL.Simple.Types (Only(Only), Query(Query))
 import GHC.Show (showString)
+import GHC.Generics (Generic)
 
 data Author = Author {
   authorId :: Integer,
@@ -26,30 +34,35 @@ data City = City {
 }
 
 data Book = Book {
-    bookAuthorsIds :: [Integer],
+    bookId :: Integer,
     bookTitle :: String,
     bookCityId :: Integer,
     bookPublisher :: String,
     bookYear :: Int
-}
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
 
 data Article = Article {
-    articleAuthorsIds :: [Integer],
+    articleId :: Integer,
     articleTitle :: String,
-    articleJournal :: String,
-    articleYear :: Int,
+    articleJournalId :: Integer,
     articleIssue :: Int,
-    articlePages :: (Int, Int)
-}
+    articleYear :: Int,
+    articlePagesStart :: Int,
+    articlePagesEnd :: Int
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
 
 data Thesis = Thesis {
-    thesisAuthors :: [String],
+    thesisId :: Integer,
     thesisTitle :: String,
-    thesisConference :: String,
-    thesisCity :: City,
+    thesisCityId :: Integer,
+    thesisConferenceId :: Integer,
     thesisYear :: Int,
-    thesisPages :: (Int, Int)
-}
+    thesisPagesStart :: Int,
+    thesisPagesEnd :: Int
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
 
 data Command
   = Hello { message :: String }
@@ -105,14 +118,71 @@ printIdType (id, textType) = do
 
 queryTextTypesByName :: Connection -> String -> IO ()
 queryTextTypesByName connection name = do
-  let qOne = toQuery "SELECT id, 'Article' FROM articles WHERE name == ?"
-  articles :: [(Integer, Text)] <- query connection qOne (Only name)
-  let qTwo = toQuery "SELECT id, 'Book' FROM books WHERE name == ?"
-  books :: [(Integer, Text)] <- query connection qTwo (Only name)
-  let qThree = toQuery "SELECT id, 'Thesis' FROM theses WHERE name == ?"
-  theses :: [(Integer, Text)] <- query connection qThree (Only name)
+  let queryArticles = toQuery "SELECT id FROM articles WHERE name == ?"
+  articles :: [Only Integer] <- query connection queryArticles (Only name)
+  let qBooks = toQuery "SELECT id FROM books WHERE name == ?"
+  books :: [Only Integer] <- query connection qBooks (Only name)
+  let qTheses = toQuery "SELECT id, 'Thesis' FROM theses WHERE name == ?"
+  theses :: [Only Integer] <- query connection qTheses (Only name)
   
-  mapM_ printIdType articles
-  mapM_ printIdType books
-  mapM_ printIdType theses
+  mapM_ (\id -> print $ "Article: " ++ show id) articles
+  mapM_ (\id -> print $ "Book: " ++ show id) books
+  mapM_ (\id -> print $ "Thesis: " ++ show id) theses
 
+queryAllTextOfAuthor :: Connection -> String -> IO ()
+queryAllTextOfAuthor connection name = do
+  let qArticles = toQuery $ "SELECT " ++
+                       "articles.id," ++
+                       "articles.title," ++
+                       "articles.journal_id," ++
+                       "articles.issue," ++
+                       "articles.year," ++
+                       "articles.pages_start," ++
+                       "articles.pages_end " ++
+                   "FROM " ++
+                       "articles " ++
+                   "JOIN " ++
+                       "article_authors ON articles.id = article_authors.article_id " ++
+                   "JOIN " ++
+                       "authors ON article_authors.author_id = authors.id " ++
+                   "WHERE " ++
+                       "authors.name = ?;"
+  let qBooks = toQuery $ "SELECT " ++
+                        "books.id," ++
+                        "books.title," ++
+                        "books.city_id," ++
+                        "books.publisher_id, " ++
+                        "books.year " ++
+                    "FROM " ++
+                        "books " ++
+                    "JOIN " ++
+                        "book_authors ON books.id = book_authors.book_id " ++
+                    "JOIN " ++
+                        "books ON book_authors.author_id = authors.id " ++
+                    "WHERE " ++
+                        "authors.name = ?;"
+  let qTheses = toQuery $ "SELECT " ++
+                        "theses.id," ++
+                        "theses.title," ++
+                        "theses.city_id," ++
+                        "theses.conference_id," ++
+                        "theses.year," ++
+                        "theses.pages_start," ++
+                        "theses.pages_end " ++
+                    "FROM " ++
+                        "theses " ++
+                    "JOIN " ++
+                        "thesis_authors ON books.id = thesis_authors.thesis_id " ++
+                    "JOIN " ++
+                        "theses ON thesis_authors.author_id = authors.id " ++
+                    "WHERE " ++
+                        "authors.name = ?;"
+  articles :: [Article] <- query connection qArticles (Only name)
+  books :: [Book] <- query connection qBooks (Only name)
+  theses :: [Thesis] <- query connection qTheses (Only name)
+  mapM_ (\v -> print $ "Article: " ++ show v) articles
+  mapM_ (\v -> print $ "Book: " ++ show v) books
+  mapM_ (\v -> print $ "Thesis: " ++ show v) theses
+
+
+  
