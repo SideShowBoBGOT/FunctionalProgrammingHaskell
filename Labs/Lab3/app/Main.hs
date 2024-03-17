@@ -337,6 +337,73 @@ queryCreateThesisAuthor connection tId aId = do
   execute connection q (tId, aId)
   print "Created thesis-author"
 
+
+queryDeleteAuthor :: Connection -> Integer -> IO ()
+queryDeleteAuthor connection id = do
+  let q = toQuery "DELETE FROM authors WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted authors"
+
+queryDeleteCity :: Connection -> Integer -> IO ()
+queryDeleteCity connection id = do
+  let q = toQuery "DELETE FROM cities WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted city"
+
+queryDeletePublisher :: Connection -> Integer -> IO ()
+queryDeletePublisher connection id = do
+  let q = toQuery "DELETE FROM publishers WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted publisher"
+
+queryDeleteConference :: Connection -> Integer -> IO ()
+queryDeleteConference connection id = do
+  let q = toQuery "DELETE FROM conferences WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted conference"
+
+queryDeleteJournal :: Connection -> Integer -> IO ()
+queryDeleteJournal connection id = do
+  let q = toQuery "DELETE FROM journals WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted journal"
+
+queryDeleteBook :: Connection -> Integer -> IO ()
+queryDeleteBook connection id = do
+  let q = toQuery "DELETE FROM books WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted book"
+
+queryDeleteBookAuthor :: Connection -> Integer -> Integer -> IO ()
+queryDeleteBookAuthor connection id aId = do
+  let q = toQuery "DELETE FROM book_authors WHERE book_id = ? AND author_id = ?"
+  execute connection q (id, aId)
+  print "Deleted book-author"
+
+queryDeleteArticle :: Connection -> Integer -> IO ()
+queryDeleteArticle connection id = do
+  let q = toQuery "DELETE FROM articles WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted article"
+
+queryDeleteArticleAuthor :: Connection -> Integer -> Integer -> IO ()
+queryDeleteArticleAuthor connection id aId = do
+  let q = toQuery "DELETE FROM article_authors WHERE article_id = ? AND author_id = ?"
+  execute connection q (id, aId)
+  print "Deleted book-author"
+
+queryDeleteThesis :: Connection -> Integer -> IO ()
+queryDeleteThesis connection id = do
+  let q = toQuery "DELETE FROM books WHERE id = ?"
+  execute connection q (Only id)
+  print "Deleted book"
+
+queryDeleteThesisAuthor :: Connection -> Integer -> Integer -> IO ()
+queryDeleteThesisAuthor connection id aId = do
+  let q = toQuery "DELETE FROM book_authors WHERE thesis_id = ? AND author_id = ?"
+  execute connection q (id, aId)
+  print "Deleted thesis-author"
+
 data Command
   = TextTypesByName String
   | CountAllTextTypes
@@ -393,6 +460,20 @@ data Command
      thesisId :: Integer,
      authorId :: Integer
   }
+
+  | DeleteAuthor Integer
+  | DeleteCity Integer
+  | DeletePublisher Integer
+  | DeleteConference Integer
+  | DeleteJournal Integer
+  | DeleteBook Integer
+  | DeleteBookAuthor Integer Integer
+  | DeleteArticle Integer
+  | DeleteArticleAuthor Integer Integer
+  | DeleteThesis Integer
+  | DeleteThesisAuthor Integer Integer
+
+
   deriving (Show, Generic)
 
 cmdTextTypesByName :: Parser Command
@@ -500,6 +581,53 @@ cmdCreateThesisAuthor = CreateThesisAuthor
   <*> argument auto (metavar "INTEGER" <> help "Author id")
 
 
+cmdDeleteAuthor :: Parser Command
+cmdDeleteAuthor = DeleteAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdDeleteCity :: Parser Command
+cmdDeleteCity = DeleteCity
+  <$> argument auto (metavar "INTEGER" <> help "City id")
+
+cmdDeletePublisher :: Parser Command
+cmdDeletePublisher = DeletePublisher
+  <$> argument auto (metavar "INTEGER" <> help "Publisher id")
+
+cmdDeleteConference :: Parser Command
+cmdDeleteConference = DeleteConference
+  <$> argument auto (metavar "INTEGER" <> help "Conference id")
+
+cmdDeleteJournal :: Parser Command
+cmdDeleteJournal = DeleteJournal
+  <$> argument auto (metavar "INTEGER" <> help "Journal id")
+
+cmdDeleteBook :: Parser Command
+cmdDeleteBook = DeleteBook
+  <$> argument auto (metavar "INTEGER" <> help "Book id")
+
+cmdDeleteBookAuthor :: Parser Command
+cmdDeleteBookAuthor = DeleteBookAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Book id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdDeleteArticle :: Parser Command
+cmdDeleteArticle = DeleteArticle
+  <$> argument auto (metavar "INTEGER" <> help "Article id")
+
+cmdDeleteArticleAuthor :: Parser Command
+cmdDeleteArticleAuthor = DeleteArticleAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Article id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdDeleteThesis :: Parser Command
+cmdDeleteThesis = DeleteThesis
+  <$> argument auto (metavar "INTEGER" <> help "Thesis id")
+
+cmdDeleteThesisAuthor :: Parser Command
+cmdDeleteThesisAuthor = DeleteThesisAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Thesis id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
 
 commandParser :: Parser Command
 commandParser = subparser
@@ -526,6 +654,7 @@ commandParser = subparser
     <> command "all-article-authors" (info (cmdAllArticleAuthors <**> helper) (progDesc "Print all article authors"))
     <> command "all-theses" (info (cmdAllTheses <**> helper) (progDesc "Print all theses"))
     <> command "all-thesis-authors" (info (cmdAllThesisAuthors <**> helper) (progDesc "Print all thesis authors"))
+
     <> command "create-author" (info (cmdCreateAuthor <**> helper) (progDesc "Create author"))
     <> command "create-city" (info (cmdCreateCity <**> helper) (progDesc "Create city"))
     <> command "create-publisher" (info (cmdCreatePublisher <**> helper) (progDesc "Create publisher"))
@@ -537,6 +666,19 @@ commandParser = subparser
     <> command "create-article-author" (info (cmdCreateArticleAuthor <**> helper) (progDesc "Create article-author pair"))
     <> command "create-thesis" (info (cmdCreateThesis <**> helper) (progDesc "Create thesis"))
     <> command "create-thesis-author" (info (cmdCreateThesisAuthor <**> helper) (progDesc "Create thesis-author pair"))
+
+    <> command "delete-author" (info (cmdDeleteAuthor <**> helper) (progDesc "Delete author"))
+    <> command "delete-city" (info (cmdDeleteCity <**> helper) (progDesc "Delete city"))
+    <> command "delete-publisher" (info (cmdDeletePublisher <**> helper) (progDesc "Delete publisher"))
+    <> command "delete-conference" (info (cmdDeleteConference <**> helper) (progDesc "Delete conference"))
+    <> command "delete-journal" (info (cmdDeleteJournal <**> helper) (progDesc "Delete journal"))
+    <> command "delete-book" (info (cmdDeleteBook <**> helper) (progDesc "Delete book"))
+    <> command "delete-book-author" (info (cmdDeleteBookAuthor <**> helper) (progDesc "Delete book-author pair"))
+    <> command "delete-article" (info (cmdDeleteArticle <**> helper) (progDesc "Delete article"))
+    <> command "delete-article-author" (info (cmdDeleteArticleAuthor <**> helper) (progDesc "Delete article-author pair"))
+    <> command "delete-thesis" (info (cmdDeleteThesis <**> helper) (progDesc "Delete thesis"))
+    <> command "delete-thesis-author" (info (cmdDeleteThesisAuthor <**> helper) (progDesc "Delete thesis-author pair"))
+
   )
 
 programParser :: ParserInfo Command
@@ -576,4 +718,30 @@ executeCommand (CreateArticleAuthor arId aId) connection = queryCreateArticleAut
 executeCommand (CreateThesis tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd) connection
   = queryCreateThesis connection tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd
 executeCommand (CreateThesisAuthor tId aId) connection = queryCreateThesisAuthor connection tId aId
+
+executeCommand (DeleteAuthor aId) connection = queryDeleteAuthor connection aId
+executeCommand (DeleteCity cId) connection = queryDeleteCity connection cId
+executeCommand (DeletePublisher pId) connection = queryDeletePublisher connection pId
+executeCommand (DeleteConference cId) connection = queryDeleteConference connection cId
+executeCommand (DeleteJournal jId) connection = queryDeleteJournal connection jId
+executeCommand (DeleteBook bId) connection = queryDeleteBook connection bId
+executeCommand (DeleteBookAuthor bId aId) connection = queryDeleteBookAuthor connection bId aId
+executeCommand (DeleteArticle arId) connection = queryDeleteArticle connection arId
+executeCommand (DeleteArticleAuthor arId aId) connection = queryDeleteArticleAuthor connection arId aId
+executeCommand (DeleteThesis tId) connection = queryDeleteThesis connection tId
+executeCommand (DeleteThesisAuthor tId aId) connection = queryDeleteThesisAuthor connection tId aId
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
