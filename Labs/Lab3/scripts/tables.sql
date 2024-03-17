@@ -13,6 +13,11 @@ CREATE TABLE publishers (
     name TEXT NOT NULL
 );
 
+CREATE TABLE journals (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
 CREATE TABLE books (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -29,11 +34,6 @@ CREATE TABLE book_authors (
     FOREIGN KEY (book_id) REFERENCES books(id),
     FOREIGN KEY (author_id) REFERENCES authors(id),
     PRIMARY KEY (book_id, author_id)
-);
-
-CREATE TABLE journals (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL
 );
 
 CREATE TABLE articles (

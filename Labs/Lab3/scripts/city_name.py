@@ -6,7 +6,7 @@ postdoubles = ["ing", "en", "er"]
 mid = ["bas", "ber", "stan", "ring", "den", "-under-", " on ", "en", "re", "rens", "comp", "mer", "sey", "mans"]
 last = ["ford", "stoke", "ley", "ney",  "don", "den", "ton", "bury", "well", "beck", "ham", "borough", "side", "wick", "hampton", "wich", "cester", "chester", "ling", "moor", "wood", "brook", "port", "wold", "mere", "castle", "hall", "bridge", "combe", "smith", "field", "ditch", "wang", "over", "worth", "by", "brough", "low", "grove", "avon", "sted", "bourne", "borne", "thorne", "lake", "shot", "bage", "head", "ey", "nell", "tree", "down"]
 
-def doname():
+def generate_city_name() -> str:
     finished_name = ""
     pd = 0
     if(random.random()  > 0.4):
@@ -54,4 +54,4 @@ def doname():
     if(fix[1] == '-'):
         finished_name = fix[0] + '-' + fix[2].capitalize()
 
-    print(finished_name)
+    return finished_name
