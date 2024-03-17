@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Main (main) where
 
@@ -25,6 +26,27 @@ import GHC.Generics (Generic)
 data Author = Author {
   authorId :: Integer,
   authorName :: String
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data BookAuthor = BookAuthor {
+  bookAuthorId :: Integer,
+  bookId :: Integer,
+  authorId :: Integer
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data ArticleAuthor = ArticleAuthor {
+  articleAuthorId :: Integer,
+  articleId :: Integer,
+  authorId :: Integer
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data ThesisAuthor = ThesisAuthor {
+  thesisAuthorId :: Integer,
+  thesisId :: Integer,
+  authorId :: Integer
 } deriving (Show, Generic)
   deriving anyclass (ToRow, FromRow)
 
@@ -56,8 +78,8 @@ data Book = Book {
     bookId :: Integer,
     bookTitle :: String,
     bookCityId :: Integer,
-    bookPublisher :: String,
-    bookYear :: Int
+    bookPublisherId :: Integer,
+    bookYear :: Integer
 } deriving (Show, Generic)
   deriving anyclass (ToRow, FromRow)
 
@@ -104,16 +126,17 @@ toQuery = fromString
 
 queryTextTypesByName :: Connection -> String -> IO ()
 queryTextTypesByName connection name = do
-  let queryArticles = toQuery "SELECT id FROM articles WHERE name == ?"
+  let queryArticles = toQuery "SELECT id FROM articles WHERE title = ?"
   articles :: [Only Integer] <- query connection queryArticles (Only name)
-  let qBooks = toQuery "SELECT id FROM books WHERE name == ?"
+  let qBooks = toQuery "SELECT id FROM books WHERE title = ?"
   books :: [Only Integer] <- query connection qBooks (Only name)
-  let qTheses = toQuery "SELECT id, 'Thesis' FROM theses WHERE name == ?"
+  let qTheses = toQuery "SELECT id FROM theses WHERE title = ?"
   theses :: [Only Integer] <- query connection qTheses (Only name)
-  
-  mapM_ (\id -> print $ "Article: " ++ show id) articles
-  mapM_ (\id -> print $ "Book: " ++ show id) books
-  mapM_ (\id -> print $ "Thesis: " ++ show id) theses
+
+  let showOnly = show . fromOnly
+  mapM_ (\id -> print $ "Article: " ++ showOnly id) articles
+  mapM_ (\id -> print $ "Book: " ++ showOnly id) books
+  mapM_ (\id -> print $ "Thesis: " ++ showOnly id) theses
 
 queryAllTextSingleAuthored :: Connection -> String -> IO ()
 queryAllTextSingleAuthored connection name = do
@@ -144,7 +167,7 @@ queryAllTextSingleAuthored connection name = do
                     "JOIN " ++
                         "book_authors ON books.id = book_authors.book_id " ++
                     "JOIN " ++
-                        "books ON book_authors.author_id = authors.id " ++
+                        "authors ON book_authors.author_id = authors.id " ++
                     "WHERE " ++
                         "authors.name = ?;"
   let qTheses = toQuery $ "SELECT " ++
@@ -158,9 +181,9 @@ queryAllTextSingleAuthored connection name = do
                     "FROM " ++
                         "theses " ++
                     "JOIN " ++
-                        "thesis_authors ON books.id = thesis_authors.thesis_id " ++
+                        "thesis_authors ON theses.id = thesis_authors.thesis_id " ++
                     "JOIN " ++
-                        "theses ON thesis_authors.author_id = authors.id " ++
+                        "authors ON thesis_authors.author_id = authors.id " ++
                     "WHERE " ++
                         "authors.name = ?;"
   articles :: [Article] <- query connection qArticles (Only name)
@@ -169,6 +192,31 @@ queryAllTextSingleAuthored connection name = do
   mapM_ (\v -> print $ "Article: " ++ show v) articles
   mapM_ (\v -> print $ "Book: " ++ show v) books
   mapM_ (\v -> print $ "Thesis: " ++ show v) theses
+
+queryCountAllTextTypes :: Connection -> IO ()
+queryCountAllTextTypes connection = do
+  let qArticles = toQuery "SELECT COUNT(*) FROM articles;"
+  articles :: [Only Int] <- query_ connection qArticles
+  let qBooks = toQuery "SELECT COUNT(*) FROM books;"
+  books :: [Only Int] <- query_ connection qBooks
+  let qTheses = toQuery "SELECT COUNT(*) FROM theses;"
+  theses :: [Only Int] <- query_ connection qTheses
+  print $ "Articles count: " ++ show (fromOnly $ head articles)
+  print $ "Books count: " ++ show (fromOnly $ head books)
+  print $ "Theses count: " ++ show (fromOnly $ head theses)
+
+
+queryAllAuthors :: Connection -> IO ()
+queryAllAuthors connection = do
+  let q = toQuery "SELECT id, name FROM authors;"
+  authors :: [Author] <- query_ connection q
+  mapM_ print authors
+
+queryAllCities :: Connection -> IO ()
+queryAllCities connection = do
+  let q = toQuery "SELECT id, name FROM cities;"
+  vals :: [City] <- query_ connection q
+  mapM_ print vals
 
 queryAllPublishers :: Connection -> IO ()
 queryAllPublishers connection = do
@@ -188,37 +236,77 @@ queryAllJournals connection = do
   journals :: [Journal] <- query_ connection q
   mapM_ print journals
 
-queryCountAllTextTypes :: Connection -> IO ()
-queryCountAllTextTypes connection = do
-  let qArticles = toQuery "SELECT COUNT(*) FROM articles;"
-  articles :: [Only Int] <- query_ connection qArticles
-  let qBooks = toQuery "SELECT COUNT(*) FROM books;"
-  books :: [Only Int] <- query_ connection qBooks
-  let qTheses = toQuery "SELECT COUNT(*) FROM theses;"
-  theses :: [Only Int] <- query_ connection qTheses
-  print $ "Articles count: " ++ show (fromOnly $ head articles)
-  print $ "Books count: " ++ show (fromOnly $ head books)
-  print $ "Theses count: " ++ show (fromOnly $ head theses)
+queryAllBooks :: Connection -> IO ()
+queryAllBooks connection = do
+  let q = toQuery "SELECT id, title, city_id, publisher_id, year name FROM books;"
+  vals :: [Book] <- query_ connection q
+  mapM_ print vals
+
+queryAllBookAuthors :: Connection -> IO ()
+queryAllBookAuthors connection = do
+  let q = toQuery "SELECT id, bookId, author_id name FROM book_authors;"
+  vals :: [BookAuthor] <- query_ connection q
+  mapM_ print vals
+
+queryAllArticles :: Connection -> IO ()
+queryAllArticles connection = do
+  let q = toQuery "SELECT id, title, journal_id, issue, year, pages_start, pages_end name FROM articles;"
+  vals :: [Article] <- query_ connection q
+  mapM_ print vals
+
+queryAllArticleAuthors :: Connection -> IO ()
+queryAllArticleAuthors connection = do
+  let q = toQuery "SELECT id, article_id, author_id name FROM article_authors;"
+  vals :: [ArticleAuthor] <- query_ connection q
+  mapM_ print vals
+  
+queryAllTheses :: Connection -> IO ()
+queryAllTheses connection = do
+  let q = toQuery "SELECT id, title, city_id, issue, conference_id, year, pages_start, pages_end name FROM theses;"
+  vals :: [Thesis] <- query_ connection q
+  mapM_ print vals
+
+queryAllThesisAuthors :: Connection -> IO ()
+queryAllThesisAuthors connection = do
+  let q = toQuery "SELECT id, thesis_id, author_id name FROM thesis_authors;"
+  vals :: [ThesisAuthor] <- query_ connection q
+  mapM_ print vals
 
 data Command
   = TextTypesByName String
+  | CountAllTextTypes
   | AllTextSingleAuthored String
+
+  | AllAuthors
+  | AllCities
   | AllPublishers
   | AllConferences
   | AllJournals
-  | CountAllTextTypes
+  | AllBooks
+  | AllBookAuthors
+  | AllArticles
+  | AllArticleAuthors
+  | AllTheses
+  | AllThesisAuthors
+
   deriving Show
 
 cmdTextTypesByName :: Parser Command
 cmdTextTypesByName = TextTypesByName
-  <$> strOption (metavar "STRING" <> help "Name of text")
+  <$> argument str (metavar "STRING" <> help "Name of text")
 
 cmdAllTextSingleAuthored :: Parser Command
 cmdAllTextSingleAuthored = AllTextSingleAuthored
-  <$> strOption (
-    metavar "STRING"
-    <> help ""
-  )
+  <$> argument str (metavar "STRING" <> help "author name")
+
+cmdCountAllTextTypes :: Parser Command
+cmdCountAllTextTypes = pure CountAllTextTypes
+
+cmdAllAuthors :: Parser Command
+cmdAllAuthors = pure AllAuthors
+
+cmdAllCities :: Parser Command
+cmdAllCities = pure AllCities
 
 cmdAllPublishers :: Parser Command
 cmdAllPublishers = pure AllPublishers
@@ -229,8 +317,23 @@ cmdAllConferences = pure AllConferences
 cmdAllJournals :: Parser Command
 cmdAllJournals = pure AllJournals
 
-cmdCountAllTextTypes :: Parser Command
-cmdCountAllTextTypes = pure CountAllTextTypes
+cmdAllBooks :: Parser Command
+cmdAllBooks = pure AllBooks
+
+cmdAllBookAuthors :: Parser Command
+cmdAllBookAuthors = pure AllBookAuthors
+
+cmdAllArticles :: Parser Command
+cmdAllArticles = pure AllArticles
+
+cmdAllArticleAuthors :: Parser Command
+cmdAllArticleAuthors = pure AllArticleAuthors
+
+cmdAllTheses :: Parser Command
+cmdAllTheses = pure AllTheses
+
+cmdAllThesisAuthors :: Parser Command
+cmdAllThesisAuthors = pure AllThesisAuthors
 
 commandParser :: Parser Command
 commandParser = subparser
@@ -246,9 +349,17 @@ commandParser = subparser
     <> command "count_all_text_types" (
       info cmdCountAllTextTypes(progDesc "Count all text types")
     )
+    <> command "all_authors" (info cmdAllAuthors (progDesc "Print all authors"))
+    <> command "all_cities" (info cmdAllCities (progDesc "Print all cities"))
     <> command "all_publishers" (info cmdAllPublishers (progDesc "Print all publishers"))
     <> command "all_conferences" (info cmdAllConferences (progDesc "Print all conferences"))
     <> command "all_journals" (info cmdAllJournals (progDesc "Print all journals"))
+    <> command "all_books" (info cmdAllBooks (progDesc "Print all books"))
+    <> command "all_book_authors" (info cmdAllBookAuthors (progDesc "Print all book authors"))
+    <> command "all_articles" (info cmdAllArticles (progDesc "Print all articles"))
+    <> command "all_article_authors" (info cmdAllArticleAuthors (progDesc "Print all article authors"))
+    <> command "all_theses" (info cmdAllTheses (progDesc "Print all theses"))
+    <> command "all_thesis_authors" (info cmdAllThesisAuthors (progDesc "Print all thesis authors"))
   )
 
 programParser :: ParserInfo Command
@@ -261,7 +372,17 @@ programParser = info (commandParser <**> helper)
 executeCommand :: Command -> Connection -> IO ()
 executeCommand (TextTypesByName name) connection = queryTextTypesByName connection name
 executeCommand (AllTextSingleAuthored name) connection = queryAllTextSingleAuthored connection name
+executeCommand CountAllTextTypes connection = queryCountAllTextTypes connection
+
+executeCommand AllAuthors connection = queryAllAuthors connection
+executeCommand AllCities connection = queryAllCities connection
 executeCommand AllPublishers connection = queryAllPublishers connection
 executeCommand AllConferences connection = queryAllConferences connection
 executeCommand AllJournals connection = queryAllJournals connection
-executeCommand CountAllTextTypes connection = queryCountAllTextTypes connection
+executeCommand AllBooks connection = queryAllBooks connection
+executeCommand AllBookAuthors connection = queryAllBookAuthors connection
+executeCommand AllArticles connection = queryAllArticles connection
+executeCommand AllArticleAuthors connection = queryAllArticleAuthors connection
+executeCommand AllTheses connection = queryAllTheses connection
+executeCommand AllThesisAuthors connection = queryAllThesisAuthors connection
+

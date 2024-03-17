@@ -13,6 +13,11 @@ CREATE TABLE publishers (
     name TEXT NOT NULL
 );
 
+CREATE TABLE conferences (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
 CREATE TABLE journals (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL
@@ -53,19 +58,6 @@ CREATE TABLE article_authors (
     FOREIGN KEY (article_id) REFERENCES articles(id),
     FOREIGN KEY (author_id) REFERENCES authors(id),
     PRIMARY KEY (article_id, author_id)
-);
-
-CREATE TABLE article_journals (
-    article_id INTEGER NOT NULL,
-    journal_id INTEGER NOT NULL,
-    FOREIGN KEY (article_id) REFERENCES articles(id),
-    FOREIGN KEY (journal_id) REFERENCES journals(id),
-    PRIMARY KEY (article_id, journal_id)
-);
-
-CREATE TABLE conferences (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL
 );
 
 CREATE TABLE theses (
