@@ -12,7 +12,7 @@ import Hardcoded
 import Data.String (fromString)
 import Data.ByteString ()
 import Database.PostgreSQL.Simple (
-  query, query_, fromOnly, FromRow, ToRow)
+  query, query_, fromOnly, FromRow, ToRow, execute)
 import Database.PostgreSQL.Simple.Internal (
   connectHost, connectUser, connectDatabase,
   connectPassword, Connection, connect,
@@ -270,14 +270,72 @@ queryAllThesisAuthors connection = do
   let q = toQuery "SELECT id, thesis_id, author_id name FROM thesis_authors;"
   vals :: [ThesisAuthor] <- query_ connection q
   mapM_ print vals
-  
 
-queryCreateAuthor :: Connection -> Author -> IO ()
-queryCreateAuthor connection author = do
-  let q = toQuery "INSERT INTO authors (name) VALUES (?)"
-  authorIds :: [Only Int64] <- query connection author
-  mapM_ (\id -> print $ "Created author with id " ++ show (fromOnly id)) authorIds  
+queryCreateAuthor :: Connection -> String -> IO ()
+queryCreateAuthor connection name = do
+  let q = toQuery "INSERT INTO authors (name) VALUES (?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (Only name)
+  mapM_ (\id -> print $ "Created author with id " ++ show (fromOnly id)) ids
 
+queryCreateCity:: Connection -> String -> IO ()
+queryCreateCity connection name = do
+  let q = toQuery "INSERT INTO cities (name) VALUES (?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (Only name)
+  mapM_ (\id -> print $ "Created city with id " ++ show (fromOnly id)) ids
+
+queryCreatePublisher:: Connection -> String -> IO ()
+queryCreatePublisher connection name = do
+  let q = toQuery "INSERT INTO publishers (name) VALUES (?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (Only name)
+  mapM_ (\id -> print $ "Created publisher with id " ++ show (fromOnly id)) ids
+
+queryCreateConference:: Connection -> String -> IO ()
+queryCreateConference connection name = do
+  let q = toQuery "INSERT INTO conferences (name) VALUES (?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (Only name)
+  mapM_ (\id -> print $ "Created conference with id " ++ show (fromOnly id)) ids
+
+queryCreateJournal:: Connection -> String -> IO ()
+queryCreateJournal connection name = do
+  let q = toQuery "INSERT INTO journals (name) VALUES (?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (Only name)
+  mapM_ (\id -> print $ "Created journal with id " ++ show (fromOnly id)) ids
+
+queryCreateBook :: Connection -> String -> Integer -> Integer -> Integer -> IO ()
+queryCreateBook connection title city_id publisher_id year = do
+  let q = toQuery "INSERT INTO books (title, city_id, publisher_id, year) VALUES (?, ?, ?, ?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (title, city_id, publisher_id, year)
+  mapM_ (\id -> print $ "Created book with id " ++ show (fromOnly id)) ids
+
+queryCreateBookAuthor :: Connection -> Integer -> Integer -> IO ()
+queryCreateBookAuthor connection bId aId = do
+  let q = toQuery "INSERT INTO book_authors (book_id, author_id) VALUES (?, ?)"
+  execute connection q (bId, aId)
+  print "Created book-author"
+
+queryCreateArticle :: Connection -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
+queryCreateArticle connection aTitle aJournalId aIssue aYear aPagesStart aPagesEnd = do
+  let q = toQuery "INSERT INTO articles (title, journal_id, issue, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (aTitle, aJournalId, aIssue, aYear, aPagesStart, aPagesEnd)
+  mapM_ (\id -> print $ "Created article with id " ++ show (fromOnly id)) ids
+
+queryCreateArticleAuthor :: Connection -> Integer -> Integer -> IO ()
+queryCreateArticleAuthor connection arId aId = do
+  let q = toQuery "INSERT INTO article_authors (article_id, author_id) VALUES (?, ?)"
+  execute connection q (arId, aId)
+  print "Created article-author"
+
+queryCreateThesis :: Connection -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
+queryCreateThesis connection tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd = do
+  let q = toQuery "INSERT INTO theses (title, city_id, conference_id, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+  ids :: [Only Int64] <- query connection q (tTitle, tCityId, tConferenceId, tYear, tPagesStart, tPagesEnd)
+  mapM_ (\id -> print $ "Created thesis with id " ++ show (fromOnly id)) ids
+
+queryCreateThesisAuthor :: Connection -> Integer -> Integer -> IO ()
+queryCreateThesisAuthor connection tId aId = do
+  let q = toQuery "INSERT INTO thesis_authors (thesis_id, author_id) VALUES (?, ?)"
+  execute connection q (tId, aId)
+  print "Created thesis-author"
 
 data Command
   = TextTypesByName String
@@ -314,10 +372,10 @@ data Command
   | CreateArticle {
     articleTitle :: String,
     articleJournalId :: Integer,
-    articleIssue :: Int,
-    articleYear :: Int,
-    articlePagesStart :: Int,
-    articlePagesEnd :: Int
+    articleIssue :: Integer,
+    articleYear :: Integer,
+    articlePagesStart :: Integer,
+    articlePagesEnd :: Integer
   }
   | CreateArticleAuthor {
     articleId :: Integer,
@@ -327,16 +385,15 @@ data Command
     thesisTitle :: String,
     thesisCityId :: Integer,
     thesisConferenceId :: Integer,
-    thesisYear :: Int,
-    thesisPagesStart :: Int,
-    thesisPagesEnd :: Int
+    thesisYear :: Integer,
+    thesisPagesStart :: Integer,
+    thesisPagesEnd :: Integer
   }
   | CreateThesisAuthor {
      thesisId :: Integer,
      authorId :: Integer
   }
-
-  deriving Show
+  deriving (Show, Generic)
 
 cmdTextTypesByName :: Parser Command
 cmdTextTypesByName = TextTypesByName
@@ -404,7 +461,7 @@ cmdCreateJournal = CreateJournal
 
 cmdCreateBook :: Parser Command
 cmdCreateBook = CreateBook
-  <$> argument str (metavar "STRING" <> help "Book title")
+  <$> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "City id")
   <*> argument auto (metavar "INTEGER" <> help "Publisher id")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -416,7 +473,7 @@ cmdCreateBookAuthor = CreateBookAuthor
 
 cmdCreateArticle :: Parser Command
 cmdCreateArticle = CreateArticle
-  <$> argument str (metavar "STRING" <> help "Article title")
+  <$> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "Journal id")
   <*> argument auto (metavar "INTEGER" <> help "Issue")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -430,7 +487,7 @@ cmdCreateArticleAuthor = CreateArticleAuthor
 
 cmdCreateThesis :: Parser Command
 cmdCreateThesis = CreateThesis
-  <$> argument str (metavar "STRING" <> help "Article title")
+  <$> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "City id")
   <*> argument auto (metavar "INTEGER" <> help "Conference id")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -440,7 +497,7 @@ cmdCreateThesis = CreateThesis
 cmdCreateThesisAuthor :: Parser Command
 cmdCreateThesisAuthor = CreateThesisAuthor
   <$> argument auto (metavar "INTEGER" <> help "Thesis id")
-  <*> argument auto (metavar "INTEGER" <> help "Thesis id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
 
 
 
@@ -448,27 +505,38 @@ commandParser :: Parser Command
 commandParser = subparser
   (
     command "text_types_by_name" (
-      info cmdTextTypesByName (progDesc "Get all text types by name")
+      info (cmdTextTypesByName <**> helper) (progDesc "Get all text types by name")
     )
     <> command "all_text_single_authored" (
-      info cmdAllTextSingleAuthored (
+      info (cmdAllTextSingleAuthored <**> helper) (
         progDesc "Get names of all solely written texts of the provided author"
       )
     )
     <> command "count_all_text_types" (
-      info cmdCountAllTextTypes(progDesc "Count all text types")
+      info (cmdCountAllTextTypes <**> helper) (progDesc "Count all text types")
     )
-    <> command "all_authors" (info cmdAllAuthors (progDesc "Print all authors"))
-    <> command "all_cities" (info cmdAllCities (progDesc "Print all cities"))
-    <> command "all_publishers" (info cmdAllPublishers (progDesc "Print all publishers"))
-    <> command "all_conferences" (info cmdAllConferences (progDesc "Print all conferences"))
-    <> command "all_journals" (info cmdAllJournals (progDesc "Print all journals"))
-    <> command "all_books" (info cmdAllBooks (progDesc "Print all books"))
-    <> command "all_book_authors" (info cmdAllBookAuthors (progDesc "Print all book authors"))
-    <> command "all_articles" (info cmdAllArticles (progDesc "Print all articles"))
-    <> command "all_article_authors" (info cmdAllArticleAuthors (progDesc "Print all article authors"))
-    <> command "all_theses" (info cmdAllTheses (progDesc "Print all theses"))
-    <> command "all_thesis_authors" (info cmdAllThesisAuthors (progDesc "Print all thesis authors"))
+    <> command "all-authors" (info (cmdAllAuthors <**> helper) (progDesc "Print all authors"))
+    <> command "all-cities" (info (cmdAllCities <**> helper) (progDesc "Print all cities"))
+    <> command "all-publishers" (info (cmdAllPublishers <**> helper) (progDesc "Print all publishers"))
+    <> command "all-conferences" (info (cmdAllConferences <**> helper) (progDesc "Print all conferences"))
+    <> command "all-journals" (info (cmdAllJournals <**> helper) (progDesc "Print all journals"))
+    <> command "all-books" (info (cmdAllBooks <**> helper) (progDesc "Print all books"))
+    <> command "all-book-authors" (info (cmdAllBookAuthors <**> helper) (progDesc "Print all book authors"))
+    <> command "all-articles" (info (cmdAllArticles <**> helper) (progDesc "Print all articles"))
+    <> command "all-article-authors" (info (cmdAllArticleAuthors <**> helper) (progDesc "Print all article authors"))
+    <> command "all-theses" (info (cmdAllTheses <**> helper) (progDesc "Print all theses"))
+    <> command "all-thesis-authors" (info (cmdAllThesisAuthors <**> helper) (progDesc "Print all thesis authors"))
+    <> command "create-author" (info (cmdCreateAuthor <**> helper) (progDesc "Create author"))
+    <> command "create-city" (info (cmdCreateCity <**> helper) (progDesc "Create city"))
+    <> command "create-publisher" (info (cmdCreatePublisher <**> helper) (progDesc "Create publisher"))
+    <> command "create-conference" (info (cmdCreateConference <**> helper) (progDesc "Create conference"))
+    <> command "create-journal" (info (cmdCreateJournal <**> helper) (progDesc "Create journal"))
+    <> command "create-book" (info (cmdCreateBook <**> helper) (progDesc "Create book"))
+    <> command "create-book-author" (info (cmdCreateBookAuthor <**> helper) (progDesc "Create book-author pair"))
+    <> command "create-article" (info (cmdCreateArticle <**> helper) (progDesc "Create article"))
+    <> command "create-article-author" (info (cmdCreateArticleAuthor <**> helper) (progDesc "Create article-author pair"))
+    <> command "create-thesis" (info (cmdCreateThesis <**> helper) (progDesc "Create thesis"))
+    <> command "create-thesis-author" (info (cmdCreateThesisAuthor <**> helper) (progDesc "Create thesis-author pair"))
   )
 
 programParser :: ParserInfo Command
@@ -494,4 +562,18 @@ executeCommand AllArticles connection = queryAllArticles connection
 executeCommand AllArticleAuthors connection = queryAllArticleAuthors connection
 executeCommand AllTheses connection = queryAllTheses connection
 executeCommand AllThesisAuthors connection = queryAllThesisAuthors connection
+
+executeCommand (CreateAuthor name) connection = queryCreateAuthor connection name
+executeCommand (CreateCity name) connection = queryCreateCity connection name
+executeCommand (CreatePublisher name) connection = queryCreatePublisher connection name
+executeCommand (CreateConference name) connection = queryCreateConference connection name
+executeCommand (CreateJournal name) connection = queryCreateJournal connection name
+executeCommand (CreateBook title cId pId year) connection = queryCreateBook connection title cId pId year
+executeCommand (CreateBookAuthor bId aId) connection = queryCreateBookAuthor connection bId aId
+executeCommand (CreateArticle aTitle aJournalId aIssue aYear aPagesStart aPagesEnd) connection
+  = queryCreateArticle connection aTitle aJournalId aIssue aYear aPagesStart aPagesEnd
+executeCommand (CreateArticleAuthor arId aId) connection = queryCreateArticleAuthor connection arId aId
+executeCommand (CreateThesis tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd) connection
+  = queryCreateThesis connection tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd
+executeCommand (CreateThesisAuthor tId aId) connection = queryCreateThesisAuthor connection tId aId
 
