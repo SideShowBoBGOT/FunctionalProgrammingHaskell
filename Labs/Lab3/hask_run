@@ -1,0 +1,1 @@
+ stack build && stack run -- all_publishers

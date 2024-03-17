@@ -5,7 +5,6 @@
 
 module Main (main) where
 
---import Database.PostgreSQL.Simple
 import Options.Applicative
 import Data.Semigroup ((<>))
 import Lib
@@ -26,12 +25,32 @@ import GHC.Generics (Generic)
 data Author = Author {
   authorId :: Integer,
   authorName :: String
-}
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
 
 data City = City {
   cityId :: Integer,
   cityName :: String
-}
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data Journal = Journal {
+  journalId :: Integer,
+  journalName :: String
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data Publisher = Publisher {
+  publisherId :: Integer,
+  publisherName :: String
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
+
+data Conference = Conference {
+  conferenceId :: Integer,
+  confereceName :: String
+} deriving (Show, Generic)
+  deriving anyclass (ToRow, FromRow)
 
 data Book = Book {
     bookId :: Integer,
@@ -64,40 +83,11 @@ data Thesis = Thesis {
 } deriving (Show, Generic)
   deriving anyclass (ToRow, FromRow)
 
-data Command
-  = Hello { message :: String }
-  | PrintNumber { number :: Int }
-  deriving Show
-
-helloCommand :: Parser Command
-helloCommand = Hello
-  <$> strArgument (metavar "MESSAGE" <> help "Hello message")
-  
-printNumberCommand = PrintNumber
-  <$> argument auto (metavar "NUMBER" <> help "A number")
-
-commandParser :: Parser Command
-commandParser = subparser
-  (
-    command "hello" (info helloCommand (progDesc "Say hello"))
-    <> command "print_number" (info printNumberCommand (progDesc "print number command"))  
-  )
-  
-programParser :: ParserInfo Command
-programParser = info (commandParser <**> helper)
-  ( fullDesc
-  <> progDesc "Test program for optparse-applicative"
-  <> header "test-program - a test for optparse-applicative"
-  )
-
-
 main :: IO ()
 main = do
   connection <- getConnection
-  putStrLn "Hello"
-
-
-
+  command <- execParser programParser
+  executeCommand command connection
 
 getConnection :: IO Connection
 getConnection =
@@ -112,10 +102,6 @@ getConnection =
 toQuery :: String -> Query
 toQuery = fromString
 
-printIdType :: (Integer, Text) -> IO ()
-printIdType (id, textType) = do
-    putStrLn (show id ++ ", " ++ show textType)
-
 queryTextTypesByName :: Connection -> String -> IO ()
 queryTextTypesByName connection name = do
   let queryArticles = toQuery "SELECT id FROM articles WHERE name == ?"
@@ -129,8 +115,8 @@ queryTextTypesByName connection name = do
   mapM_ (\id -> print $ "Book: " ++ show id) books
   mapM_ (\id -> print $ "Thesis: " ++ show id) theses
 
-queryAllTextOfAuthor :: Connection -> String -> IO ()
-queryAllTextOfAuthor connection name = do
+queryAllTextSingleAuthored :: Connection -> String -> IO ()
+queryAllTextSingleAuthored connection name = do
   let qArticles = toQuery $ "SELECT " ++
                        "articles.id," ++
                        "articles.title," ++
@@ -184,5 +170,98 @@ queryAllTextOfAuthor connection name = do
   mapM_ (\v -> print $ "Book: " ++ show v) books
   mapM_ (\v -> print $ "Thesis: " ++ show v) theses
 
+queryAllPublishers :: Connection -> IO ()
+queryAllPublishers connection = do
+  let q = toQuery "SELECT id, name FROM publishers;"
+  publishers :: [Publisher] <- query_ connection q
+  mapM_ print publishers
 
-  
+queryAllConferences :: Connection -> IO ()
+queryAllConferences connection = do
+  let q = toQuery "SELECT id, name FROM conferences;"
+  conferences :: [Conference] <- query_ connection q
+  mapM_ print conferences
+
+queryAllJournals :: Connection -> IO ()
+queryAllJournals connection = do
+  let q = toQuery "SELECT id, name FROM journals;"
+  journals :: [Journal] <- query_ connection q
+  mapM_ print journals
+
+queryCountAllTextTypes :: Connection -> IO ()
+queryCountAllTextTypes connection = do
+  let qArticles = toQuery "SELECT COUNT(*) FROM articles;"
+  articles :: [Only Int] <- query_ connection qArticles
+  let qBooks = toQuery "SELECT COUNT(*) FROM books;"
+  books :: [Only Int] <- query_ connection qBooks
+  let qTheses = toQuery "SELECT COUNT(*) FROM theses;"
+  theses :: [Only Int] <- query_ connection qTheses
+  print $ "Articles count: " ++ show (fromOnly $ head articles)
+  print $ "Books count: " ++ show (fromOnly $ head books)
+  print $ "Theses count: " ++ show (fromOnly $ head theses)
+
+data Command
+  = TextTypesByName String
+  | AllTextSingleAuthored String
+  | AllPublishers
+  | AllConferences
+  | AllJournals
+  | CountAllTextTypes
+  deriving Show
+
+cmdTextTypesByName :: Parser Command
+cmdTextTypesByName = TextTypesByName
+  <$> strOption (metavar "STRING" <> help "Name of text")
+
+cmdAllTextSingleAuthored :: Parser Command
+cmdAllTextSingleAuthored = AllTextSingleAuthored
+  <$> strOption (
+    metavar "STRING"
+    <> help ""
+  )
+
+cmdAllPublishers :: Parser Command
+cmdAllPublishers = pure AllPublishers
+
+cmdAllConferences :: Parser Command
+cmdAllConferences = pure AllConferences
+
+cmdAllJournals :: Parser Command
+cmdAllJournals = pure AllJournals
+
+cmdCountAllTextTypes :: Parser Command
+cmdCountAllTextTypes = pure CountAllTextTypes
+
+commandParser :: Parser Command
+commandParser = subparser
+  (
+    command "text_types_by_name" (
+      info cmdTextTypesByName (progDesc "Get all text types by name")
+    )
+    <> command "all_text_single_authored" (
+      info cmdAllTextSingleAuthored (
+        progDesc "Get names of all solely written texts of the provided author"
+      )
+    )
+    <> command "count_all_text_types" (
+      info cmdCountAllTextTypes(progDesc "Count all text types")
+    )
+    <> command "all_publishers" (info cmdAllPublishers (progDesc "Print all publishers"))
+    <> command "all_conferences" (info cmdAllConferences (progDesc "Print all conferences"))
+    <> command "all_journals" (info cmdAllJournals (progDesc "Print all journals"))
+  )
+
+programParser :: ParserInfo Command
+programParser = info (commandParser <**> helper)
+  ( fullDesc
+  <> progDesc "Test program for optparse-applicative"
+  <> header "test-program - a test for optparse-applicative"
+  )
+
+executeCommand :: Command -> Connection -> IO ()
+executeCommand (TextTypesByName name) connection = queryTextTypesByName connection name
+executeCommand (AllTextSingleAuthored name) connection = queryAllTextSingleAuthored connection name
+executeCommand AllPublishers connection = queryAllPublishers connection
+executeCommand AllConferences connection = queryAllConferences connection
+executeCommand AllJournals connection = queryAllJournals connection
+executeCommand CountAllTextTypes connection = queryCountAllTextTypes connection
