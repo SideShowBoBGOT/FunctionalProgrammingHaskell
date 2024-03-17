@@ -157,3 +157,80 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION insert_thesis_with_authors(
+    thesis_title TEXT,
+    thesis_city_id INTEGER,
+    thesis_conference_id INTEGER,
+    thesis_year INTEGER,
+    thesis_pages_start INTEGER,
+    thesis_pages_end INTEGER,
+    author_ids INTEGER[]
+) RETURNS INTEGER AS $$
+DECLARE
+    new_thesis_id INTEGER;
+    author_id INTEGER;
+    author_count INTEGER;
+BEGIN
+    IF array_length(author_ids, 1) IS NULL OR array_length(author_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'The array of author IDs must not be empty';
+    END IF;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM authors WHERE id = author_id) THEN
+            RAISE EXCEPTION 'Author with ID % does not exist', author_id;
+        END IF;
+    END LOOP;
+
+    INSERT INTO theses (title, city_id, conference_id, year, pages_start, pages_end)
+    VALUES (thesis_title, thesis_city_id, thesis_conference_id, thesis_year, thesis_pages_start, thesis_pages_end)
+    RETURNING id INTO new_thesis_id;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        INSERT INTO thesis_authors (thesis_id, author_id)
+        VALUES (new_thesis_id, author_id);
+    END LOOP;
+
+    RETURN new_thesis_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION insert_article_with_authors(
+    article_title TEXT,
+    article_journal_id INTEGER,
+    article_issue INTEGER,
+    article_year INTEGER,
+    article_pages_start INTEGER,
+    article_pages_end INTEGER,
+    author_ids INTEGER[]
+) RETURNS INTEGER AS $$
+DECLARE
+    new_article_id INTEGER;
+    author_id INTEGER;
+    author_count INTEGER;
+BEGIN
+    IF array_length(author_ids, 1) IS NULL OR array_length(author_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'The array of author IDs must not be empty';
+    END IF;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM authors WHERE id = author_id) THEN
+            RAISE EXCEPTION 'Author with ID % does not exist', author_id;
+        END IF;
+    END LOOP;
+
+    INSERT INTO articles (title, journal_id, issue, year, pages_start, pages_end)
+    VALUES (article_title, article_journal_id, article_issue, article_year, article_pages_start, article_pages_end)
+    RETURNING id INTO new_article_id;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        INSERT INTO article_authors (article_id, author_id)
+        VALUES (new_article_id, author_id);
+    END LOOP;
+
+    RETURN new_article_id;
+END;
+$$ LANGUAGE plpgsql;

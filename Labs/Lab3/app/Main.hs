@@ -315,7 +315,7 @@ queryCreateBookAuthor connection bId aId = do
 
 queryCreateArticle :: Connection -> [Integer] -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
 queryCreateArticle connection authorIds aTitle aJournalId aIssue aYear aPagesStart aPagesEnd = do
-  let q = toQuery "INSERT INTO articles (title, journal_id, issue, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+  let q = toQuery $ "SELECT insert_article_with_authors(?, ?, ?, ?, ?, ?, ARRAY" ++ show authorIds ++ ")"
   ids :: [Only Int64] <- query connection q (aTitle, aJournalId, aIssue, aYear, aPagesStart, aPagesEnd)
   mapM_ (\id -> print $ "Created article with id " ++ show (fromOnly id)) ids
 
@@ -327,7 +327,7 @@ queryCreateArticleAuthor connection arId aId = do
 
 queryCreateThesis :: Connection-> [Integer] -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
 queryCreateThesis connection authorIds tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd = do
-  let q = toQuery "INSERT INTO theses (title, city_id, conference_id, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+  let q = toQuery $ "SELECT insert_thesis_with_authors(?, ?, ?, ?, ?, ?, ARRAY" ++ show authorIds ++ ")"
   ids :: [Only Int64] <- query connection q (tTitle, tCityId, tConferenceId, tYear, tPagesStart, tPagesEnd)
   mapM_ (\id -> print $ "Created thesis with id " ++ show (fromOnly id)) ids
 
