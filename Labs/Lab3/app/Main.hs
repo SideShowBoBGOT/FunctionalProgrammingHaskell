@@ -301,9 +301,9 @@ queryCreateJournal connection name = do
   ids :: [Only Int64] <- query connection q (Only name)
   mapM_ (\id -> print $ "Created journal with id " ++ show (fromOnly id)) ids
 
-queryCreateBook :: Connection -> String -> Integer -> Integer -> Integer -> IO ()
-queryCreateBook connection title city_id publisher_id year = do
-  let q = toQuery "INSERT INTO books (title, city_id, publisher_id, year) VALUES (?, ?, ?, ?) RETURNING id"
+queryCreateBook :: Connection -> [Integer] -> String -> Integer -> Integer -> Integer -> IO ()
+queryCreateBook connection authorIds title city_id publisher_id year = do
+  let q = toQuery $ "SELECT insert_book_with_authors(?, ?, ?, ?, ARRAY" ++ show authorIds ++ ")"
   ids :: [Only Int64] <- query connection q (title, city_id, publisher_id, year)
   mapM_ (\id -> print $ "Created book with id " ++ show (fromOnly id)) ids
 
@@ -313,8 +313,8 @@ queryCreateBookAuthor connection bId aId = do
   execute connection q (bId, aId)
   print "Created book-author"
 
-queryCreateArticle :: Connection -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
-queryCreateArticle connection aTitle aJournalId aIssue aYear aPagesStart aPagesEnd = do
+queryCreateArticle :: Connection -> [Integer] -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
+queryCreateArticle connection authorIds aTitle aJournalId aIssue aYear aPagesStart aPagesEnd = do
   let q = toQuery "INSERT INTO articles (title, journal_id, issue, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
   ids :: [Only Int64] <- query connection q (aTitle, aJournalId, aIssue, aYear, aPagesStart, aPagesEnd)
   mapM_ (\id -> print $ "Created article with id " ++ show (fromOnly id)) ids
@@ -325,8 +325,8 @@ queryCreateArticleAuthor connection arId aId = do
   execute connection q (arId, aId)
   print "Created article-author"
 
-queryCreateThesis :: Connection -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
-queryCreateThesis connection tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd = do
+queryCreateThesis :: Connection-> [Integer] -> String -> Integer -> Integer -> Integer -> Integer -> Integer -> IO ()
+queryCreateThesis connection authorIds tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd = do
   let q = toQuery "INSERT INTO theses (title, city_id, conference_id, year, pages_start, pages_end) VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
   ids :: [Only Int64] <- query connection q (tTitle, tCityId, tConferenceId, tYear, tPagesStart, tPagesEnd)
   mapM_ (\id -> print $ "Created thesis with id " ++ show (fromOnly id)) ids
@@ -427,6 +427,7 @@ data Command
   | CreateConference String
   | CreateJournal String
   | CreateBook {
+    bookAuthorIds :: [Integer],
     bookTitle :: String,
     bookCityId :: Integer,
     bookPublisherId :: Integer,
@@ -437,6 +438,7 @@ data Command
     authorId :: Integer
   }
   | CreateArticle {
+    articleAuthorIds :: [Integer],
     articleTitle :: String,
     articleJournalId :: Integer,
     articleIssue :: Integer,
@@ -449,6 +451,7 @@ data Command
     authorId :: Integer
   }
   | CreateThesis {
+    thesisAuthorIds :: [Integer],
     thesisTitle :: String,
     thesisCityId :: Integer,
     thesisConferenceId :: Integer,
@@ -542,7 +545,8 @@ cmdCreateJournal = CreateJournal
 
 cmdCreateBook :: Parser Command
 cmdCreateBook = CreateBook
-  <$> argument str (metavar "STRING" <> help "Title")
+  <$> many (option auto (long "author" <> metavar "INT" <> help "Non-empty array of author ids"))
+  <*> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "City id")
   <*> argument auto (metavar "INTEGER" <> help "Publisher id")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -554,7 +558,8 @@ cmdCreateBookAuthor = CreateBookAuthor
 
 cmdCreateArticle :: Parser Command
 cmdCreateArticle = CreateArticle
-  <$> argument str (metavar "STRING" <> help "Title")
+  <$> many (option auto (long "author" <> metavar "INT" <> help "Non-empty array of author ids"))
+  <*> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "Journal id")
   <*> argument auto (metavar "INTEGER" <> help "Issue")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -568,7 +573,8 @@ cmdCreateArticleAuthor = CreateArticleAuthor
 
 cmdCreateThesis :: Parser Command
 cmdCreateThesis = CreateThesis
-  <$> argument str (metavar "STRING" <> help "Title")
+  <$> many (option auto (long "author" <> metavar "INT" <> help "Non-empty array of author ids"))
+  <*> argument str (metavar "STRING" <> help "Title")
   <*> argument auto (metavar "INTEGER" <> help "City id")
   <*> argument auto (metavar "INTEGER" <> help "Conference id")
   <*> argument auto (metavar "INTEGER" <> help "Year")
@@ -710,13 +716,13 @@ executeCommand (CreateCity name) connection = queryCreateCity connection name
 executeCommand (CreatePublisher name) connection = queryCreatePublisher connection name
 executeCommand (CreateConference name) connection = queryCreateConference connection name
 executeCommand (CreateJournal name) connection = queryCreateJournal connection name
-executeCommand (CreateBook title cId pId year) connection = queryCreateBook connection title cId pId year
+executeCommand (CreateBook authorIds title cId pId year) connection = queryCreateBook connection authorIds title cId pId year
 executeCommand (CreateBookAuthor bId aId) connection = queryCreateBookAuthor connection bId aId
-executeCommand (CreateArticle aTitle aJournalId aIssue aYear aPagesStart aPagesEnd) connection
-  = queryCreateArticle connection aTitle aJournalId aIssue aYear aPagesStart aPagesEnd
+executeCommand (CreateArticle authorIds aTitle aJournalId aIssue aYear aPagesStart aPagesEnd) connection
+  = queryCreateArticle connection authorIds aTitle aJournalId aIssue aYear aPagesStart aPagesEnd
 executeCommand (CreateArticleAuthor arId aId) connection = queryCreateArticleAuthor connection arId aId
-executeCommand (CreateThesis tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd) connection
-  = queryCreateThesis connection tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd
+executeCommand (CreateThesis authorIds tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd) connection
+  = queryCreateThesis connection authorIds tTitle tCityId tConferenceId tYear tPagesStart tPagesEnd
 executeCommand (CreateThesisAuthor tId aId) connection = queryCreateThesisAuthor connection tId aId
 
 executeCommand (DeleteAuthor aId) connection = queryDeleteAuthor connection aId

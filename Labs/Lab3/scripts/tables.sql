@@ -82,13 +82,15 @@ CREATE TABLE thesis_authors (
 
 CREATE OR REPLACE FUNCTION delete_author_books()
 RETURNS TRIGGER AS $$
+DECLARE
+    r RECORD;
 BEGIN
     FOR r IN SELECT book_id FROM book_authors WHERE author_id = OLD.id
     LOOP
         IF (SELECT COUNT(*) FROM book_authors WHERE book_id = r.book_id) = 1 THEN
             DELETE FROM books WHERE id = r.book_id;
         ELSE
-            DELETE FROM book_authors WHERE book_id = r.book_id;
+            DELETE FROM book_authors WHERE book_id = r.book_id AND author_id = OLD.id;
         END IF;
     END LOOP;
 
@@ -97,7 +99,7 @@ BEGIN
         IF (SELECT COUNT(*) FROM thesis_authors WHERE thesis_id = r.thesis_id) = 1 THEN
             DELETE FROM theses WHERE id = r.thesis_id;
         ELSE
-            DELETE FROM thesis_authors WHERE thesis_id = r.thesis_id;
+            DELETE FROM thesis_authors WHERE thesis_id = r.thesis_id AND author_id = OLD.id;
         END IF;
     END LOOP;
 
@@ -106,7 +108,7 @@ BEGIN
         IF (SELECT COUNT(*) FROM article_authors WHERE article_id = r.article_id) = 1 THEN
             DELETE FROM articles WHERE id = r.article_id;
         ELSE
-            DELETE FROM article_authors WHERE article_id = r.article_id;
+            DELETE FROM article_authors WHERE article_id = r.article_id AND author_id = OLD.id;
         END IF;
     END LOOP;
 
@@ -117,4 +119,41 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_delete_author_books
 BEFORE DELETE ON authors
 FOR EACH ROW EXECUTE FUNCTION delete_author_books();
+
+CREATE OR REPLACE FUNCTION insert_book_with_authors(
+    book_title TEXT,
+    book_city_id INTEGER,
+    book_publisher_id INTEGER,
+    book_year INTEGER,
+    author_ids INTEGER[]
+) RETURNS INTEGER AS $$
+DECLARE
+    new_book_id INTEGER;
+    author_id INTEGER;
+    author_count INTEGER;
+BEGIN
+    IF array_length(author_ids, 1) IS NULL OR array_length(author_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'The array of author IDs must not be empty';
+    END IF;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM authors WHERE id = author_id) THEN
+            RAISE EXCEPTION 'Author with ID % does not exist', author_id;
+        END IF;
+    END LOOP;
+
+    INSERT INTO books (title, city_id, publisher_id, year)
+    VALUES (book_title, book_city_id, book_publisher_id, book_year)
+    RETURNING id INTO new_book_id;
+
+    FOREACH author_id IN ARRAY author_ids
+    LOOP
+        INSERT INTO book_authors (book_id, author_id)
+        VALUES (new_book_id, author_id);
+    END LOOP;
+
+    RETURN new_book_id;
+END;
+$$ LANGUAGE plpgsql;
 

@@ -14,10 +14,10 @@ def give_authors(authors_num: int, val_num: int, table_name: str):
 
     single_auth_len = int(authors_num * 0.5)
     author_ids = set([i for i in range(1, authors_num)])
-    single_author_ids = random.sample(author_ids, single_auth_len)
+    single_author_ids = random.sample(list(author_ids), single_auth_len)
 
     val_ids = set([i for i in range(1, books_num)])
-    single_val_ids = set(random.sample(val_ids, single_auth_len))
+    single_val_ids = set(random.sample(list(val_ids), single_auth_len))
 
     for (val_id, author_id) in zip(single_val_ids, single_author_ids):
         file.write(f'INSERT INTO {table_name}_authors ({table_name}_id, author_id) VALUES({val_id}, {author_id});\n')
@@ -26,7 +26,7 @@ def give_authors(authors_num: int, val_num: int, table_name: str):
     other_book_ids = val_ids - single_val_ids
 
     for val_id in other_book_ids:
-        sample_other_ids = random.sample(other_author_ids, random.randint(1, 4))
+        sample_other_ids = random.sample(list(other_author_ids), random.randint(1, 4))
         for auth_id in sample_other_ids:
             file.write(f'INSERT INTO {table_name}_authors ({table_name}_id, author_id) VALUES({val_id}, {auth_id});\n')
 
