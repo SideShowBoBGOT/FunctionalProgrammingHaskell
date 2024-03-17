@@ -8,10 +8,8 @@ module Main (main) where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Lib
 import Hardcoded
-import Data.String (IsString, fromString)
-import Data.Text (Text)
+import Data.String (fromString)
 import Data.ByteString ()
 import Database.PostgreSQL.Simple (
   query, query_, fromOnly, FromRow, ToRow)
@@ -19,8 +17,8 @@ import Database.PostgreSQL.Simple.Internal (
   connectHost, connectUser, connectDatabase,
   connectPassword, Connection, connect,
   defaultConnectInfo)
-import Database.PostgreSQL.Simple.Types (Only(Only), Query(Query))
-import GHC.Show (showString)
+import Database.PostgreSQL.Simple.Types (Only(Only), Query)
+import GHC.Show()
 import GHC.Generics (Generic)
 
 data Author = Author {
@@ -108,8 +106,8 @@ data Thesis = Thesis {
 main :: IO ()
 main = do
   connection <- getConnection
-  command <- execParser programParser
-  executeCommand command connection
+  cmd <- execParser programParser
+  executeCommand cmd connection
 
 getConnection :: IO Connection
 getConnection =
@@ -134,9 +132,9 @@ queryTextTypesByName connection name = do
   theses :: [Only Integer] <- query connection qTheses (Only name)
 
   let showOnly = show . fromOnly
-  mapM_ (\id -> print $ "Article: " ++ showOnly id) articles
-  mapM_ (\id -> print $ "Book: " ++ showOnly id) books
-  mapM_ (\id -> print $ "Thesis: " ++ showOnly id) theses
+  mapM_ (\textId -> print $ "Article: " ++ showOnly textId) articles
+  mapM_ (\textId -> print $ "Book: " ++ showOnly textId) books
+  mapM_ (\textId -> print $ "Thesis: " ++ showOnly textId) theses
 
 queryAllTextSingleAuthored :: Connection -> String -> IO ()
 queryAllTextSingleAuthored connection name = do
@@ -259,7 +257,7 @@ queryAllArticleAuthors connection = do
   let q = toQuery "SELECT id, article_id, author_id name FROM article_authors;"
   vals :: [ArticleAuthor] <- query_ connection q
   mapM_ print vals
-  
+
 queryAllTheses :: Connection -> IO ()
 queryAllTheses connection = do
   let q = toQuery "SELECT id, title, city_id, issue, conference_id, year, pages_start, pages_end name FROM theses;"
@@ -271,6 +269,12 @@ queryAllThesisAuthors connection = do
   let q = toQuery "SELECT id, thesis_id, author_id name FROM thesis_authors;"
   vals :: [ThesisAuthor] <- query_ connection q
   mapM_ print vals
+
+
+
+
+
+
 
 data Command
   = TextTypesByName String
@@ -288,6 +292,46 @@ data Command
   | AllArticleAuthors
   | AllTheses
   | AllThesisAuthors
+
+  | CreateAuthor String
+  | CreateCity String
+  | CreatePublisher String
+  | CreateConference String
+  | CreateJournal String
+  | CreateBook {
+    bookTitle :: String,
+    bookCityId :: Integer,
+    bookPublisherId :: Integer,
+    bookYear :: Integer
+  }
+  | CreateBookAuthor {
+    bookId :: Integer,
+    authorId :: Integer
+  }
+  | CreateArticle {
+    articleTitle :: String,
+    articleJournalId :: Integer,
+    articleIssue :: Int,
+    articleYear :: Int,
+    articlePagesStart :: Int,
+    articlePagesEnd :: Int
+  }
+  | CreateArticleAuthor {
+    articleId :: Integer,
+    authorId :: Integer
+  }
+  | CreateThesis {
+    thesisTitle :: String,
+    thesisCityId :: Integer,
+    thesisConferenceId :: Integer,
+    thesisYear :: Int,
+    thesisPagesStart :: Int,
+    thesisPagesEnd :: Int
+  }
+  | CreateThesisAuthor {
+     thesisId :: Integer,
+     authorId :: Integer
+  }
 
   deriving Show
 
@@ -334,6 +378,68 @@ cmdAllTheses = pure AllTheses
 
 cmdAllThesisAuthors :: Parser Command
 cmdAllThesisAuthors = pure AllThesisAuthors
+
+cmdCreateAuthor :: Parser Command
+cmdCreateAuthor = CreateAuthor
+  <$> argument str (metavar "STRING" <> help "Author name")
+
+cmdCreateCity :: Parser Command
+cmdCreateCity = CreateAuthor
+  <$> argument str (metavar "STRING" <> help "City name")
+
+cmdCreatePublisher :: Parser Command
+cmdCreatePublisher = CreatePublisher
+  <$> argument str (metavar "STRING" <> help "Publisher name")
+
+cmdCreateConference :: Parser Command
+cmdCreateConference = CreateConference
+  <$> argument str (metavar "STRING" <> help "Conference name")
+
+cmdCreateJournal :: Parser Command
+cmdCreateJournal = CreateJournal
+  <$> argument str (metavar "STRING" <> help "Journal name")
+
+cmdCreateBook :: Parser Command
+cmdCreateBook = CreateBook
+  <$> argument str (metavar "STRING" <> help "Book title")
+  <*> argument auto (metavar "INTEGER" <> help "City id")
+  <*> argument auto (metavar "INTEGER" <> help "Publisher id")
+  <*> argument auto (metavar "INTEGER" <> help "Year")
+
+cmdCreateBookAuthor :: Parser Command
+cmdCreateBookAuthor = CreateBookAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Book id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdCreateArticle :: Parser Command
+cmdCreateArticle = CreateArticle
+  <$> argument str (metavar "STRING" <> help "Article title")
+  <*> argument auto (metavar "INTEGER" <> help "Journal id")
+  <*> argument auto (metavar "INTEGER" <> help "Issue")
+  <*> argument auto (metavar "INTEGER" <> help "Year")
+  <*> argument auto (metavar "INTEGER" <> help "Pages start")
+  <*> argument auto (metavar "INTEGER" <> help "Pages end")
+
+cmdCreateArticleAuthor :: Parser Command
+cmdCreateArticleAuthor = CreateArticleAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Article id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdCreateThesis :: Parser Command
+cmdCreateThesis = CreateThesis
+  <$> argument str (metavar "STRING" <> help "Article title")
+  <*> argument auto (metavar "INTEGER" <> help "City id")
+  <*> argument auto (metavar "INTEGER" <> help "Conference id")
+  <*> argument auto (metavar "INTEGER" <> help "Year")
+  <*> argument auto (metavar "INTEGER" <> help "Pages start")
+  <*> argument auto (metavar "INTEGER" <> help "Pages end")
+
+cmdCreateThesisAuthor :: Parser Command
+cmdCreateThesisAuthor = CreateThesisAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Thesis id")
+  <*> argument auto (metavar "INTEGER" <> help "Thesis id")
+
+
 
 commandParser :: Parser Command
 commandParser = subparser
