@@ -20,6 +20,7 @@ import Database.PostgreSQL.Simple.Internal (
 import Database.PostgreSQL.Simple.Types (Only(Only), Query)
 import GHC.Show()
 import GHC.Generics (Generic)
+import Data.Int (Int64)
 
 data Author = Author {
   authorId :: Integer,
@@ -269,11 +270,13 @@ queryAllThesisAuthors connection = do
   let q = toQuery "SELECT id, thesis_id, author_id name FROM thesis_authors;"
   vals :: [ThesisAuthor] <- query_ connection q
   mapM_ print vals
+  
 
-
-
-
-
+queryCreateAuthor :: Connection -> Author -> IO ()
+queryCreateAuthor connection author = do
+  let q = toQuery "INSERT INTO authors (name) VALUES (?)"
+  authorIds :: [Only Int64] <- query connection author
+  mapM_ (\id -> print $ "Created author with id " ++ show (fromOnly id)) authorIds  
 
 
 data Command
