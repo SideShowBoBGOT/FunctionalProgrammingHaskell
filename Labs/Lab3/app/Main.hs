@@ -8,7 +8,7 @@ module Main (main) where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Hardcoded
+import qualified MyConnection
 import Data.String (fromString)
 import Data.ByteString ()
 import Database.PostgreSQL.Simple (
@@ -106,19 +106,9 @@ data Thesis = Thesis {
 
 main :: IO ()
 main = do
-  connection <- getConnection
+  connection <- MyConnection.getConnection
   cmd <- execParser programParser
   executeCommand cmd connection
-
-getConnection :: IO Connection
-getConnection =
-  connect
-    $ defaultConnectInfo
-      { connectHost = Hardcoded.host
-      , connectDatabase = Hardcoded.database
-      , connectUser = Hardcoded.user
-      , connectPassword = Hardcoded.password
-      }
 
 toQuery :: String -> Query
 toQuery = fromString
@@ -476,7 +466,39 @@ data Command
   | DeleteThesis Integer
   | DeleteThesisAuthor Integer Integer
 
-
+  | UpdateAuthor Integer String
+  | UpdateCity Integer String
+  | UpdatePublisher Integer String
+  | UpdateConference Integer String
+  | UpdateJournal Integer String
+  | UpdateBook {
+      upBookId :: Integer,
+      upBookTitle :: Maybe String,
+      upBookCityId :: Maybe Integer,
+      upBookPublisherId :: Maybe Integer,
+      upBookYear :: Maybe Integer
+    }
+  | UpdateBookAuthor Integer Integer
+  | UpdateArticle {
+        upArticleId :: Integer,
+        upArticleTitle :: Maybe String,
+        upArticleJournalId :: Maybe Integer,
+        upArticleIssue :: Maybe Int,
+        upArticleYear :: Maybe Int,
+        upArticlePagesStart :: Maybe Int,
+        upArticlePagesEnd :: Maybe Int
+    }
+  | UpdateArticleAuthor Integer Integer
+  | UpdateThesis {
+       upThesisId :: Integer,
+       upThesisTitle :: Maybe String,
+       upThesisCityId :: Maybe Integer,
+       upThesisConferenceId :: Maybe Integer,
+       upThesisYear :: Maybe Int,
+       upThesisPagesStart :: Maybe Int,
+       upThesisPagesEnd :: Maybe Int
+   }
+  | UpdateThesisAuthor Integer Integer
   deriving (Show, Generic)
 
 cmdTextTypesByName :: Parser Command
@@ -635,6 +657,55 @@ cmdDeleteThesisAuthor = DeleteThesisAuthor
   <*> argument auto (metavar "INTEGER" <> help "Author id")
 
 
+cmdUpdateAuthor :: Parser Command
+cmdUpdateAuthor = UpdateAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Author id")
+  <*> argument str (metavar "STRING" <> help "Author title")
+
+cmdUpdateCity :: Parser Command
+cmdUpdateCity = UpdateCity
+  <$> argument auto (metavar "INTEGER" <> help "City id")
+  <*> argument str (metavar "STRING" <> help "City name")
+
+cmdUpdatePublisher :: Parser Command
+cmdUpdatePublisher = UpdatePublisher
+  <$> argument auto (metavar "INTEGER" <> help "Publisher id")
+  <*> argument str (metavar "STRING" <> help "Publisher name")
+
+cmdUpdateConference :: Parser Command
+cmdUpdateConference = UpdateConference
+  <$> argument auto (metavar "INTEGER" <> help "Conference id")
+  <*> argument str (metavar "STRING" <> help "Conference name")
+
+cmdUpdateJournal :: Parser Command
+cmdUpdateJournal = UpdateJournal
+  <$> argument auto (metavar "INTEGER" <> help "Journal id")
+  <*> argument str (metavar "STRING" <> help "Journal name")
+
+cmdUpdateBook :: Parser Command
+cmdUpdateBook = UpdateBook
+  <$> argument auto (metavar "INTEGER" <> help "Book id")
+  <*> optional (strOption (long "title" <> short 't' <> metavar "OPTIONAL STRING" <> help "Title"))
+  <*> optional (option auto (long "city-id" <> short 'c' <> metavar "OPTIONAL INTEGER" <> help "City id"))
+  <*> optional (option auto (long "publisher-id" <> short 'p' <> metavar "OPTIONAL INTEGER" <> help "Publisher id"))
+  <*> optional (option auto (long "year" <> short 'y' <> metavar "OPTIONAL INTEGER" <> help "Year"))
+
+cmdUpdateBookAuthor :: Parser Command
+cmdUpdateBookAuthor = UpdateBookAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Book id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdUpdateArticle :: Parser Command
+cmdUpdateArticle = UpdateArticle
+  <$> argument auto (metavar "INTEGER" <> help "Article id")
+  <*> optional (strOption (long "title" <> short 't' <> metavar "OPTIONAL STRING" <> help "Title"))
+  <*> optional (option auto (long "journal-id" <> short 'j' <> metavar "OPTIONAL INTEGER" <> help "Journal id"))
+  <*> optional (option auto (long "issue" <> short 'i' <> metavar "OPTIONAL INTEGER" <> help "Issue"))
+  <*> optional (option auto (long "year" <> short 'y' <> metavar "OPTIONAL INTEGER" <> help "Year"))
+  <*> optional (option auto (long "pages-start" <> short 's' <> metavar "OPTIONAL INTEGER" <> help "Pages start"))
+  <*> optional (option auto (long "pages-end" <> short 'e' <> metavar "OPTIONAL INTEGER" <> help "Pages end"))
+
+
 commandParser :: Parser Command
 commandParser = subparser
   (
@@ -685,6 +756,14 @@ commandParser = subparser
     <> command "delete-thesis" (info (cmdDeleteThesis <**> helper) (progDesc "Delete thesis"))
     <> command "delete-thesis-author" (info (cmdDeleteThesisAuthor <**> helper) (progDesc "Delete thesis-author pair"))
 
+    <> command "update-author" (info (cmdUpdateAuthor <**> helper) (progDesc "Update author"))
+    <> command "update-city" (info (cmdUpdateCity <**> helper) (progDesc "Update city"))
+    <> command "update-publisher" (info (cmdUpdatePublisher <**> helper) (progDesc "Update publisher"))
+    <> command "update-conference" (info (cmdUpdateConference <**> helper) (progDesc "Update conference"))
+    <> command "update-journal" (info (cmdUpdateJournal <**> helper) (progDesc "Update journal"))
+    <> command "update-book" (info (cmdUpdateBook <**> helper) (progDesc "Update book"))
+    <> command "update-book-author" (info (cmdUpdateBookAuthor <**> helper) (progDesc "Update book-author pair"))
+    <> command "update-article" (info (cmdUpdateArticle <**> helper) (progDesc "Update article"))
   )
 
 programParser :: ParserInfo Command
