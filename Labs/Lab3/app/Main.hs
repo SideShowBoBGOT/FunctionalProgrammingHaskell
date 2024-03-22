@@ -705,6 +705,27 @@ cmdUpdateArticle = UpdateArticle
   <*> optional (option auto (long "pages-start" <> short 's' <> metavar "OPTIONAL INTEGER" <> help "Pages start"))
   <*> optional (option auto (long "pages-end" <> short 'e' <> metavar "OPTIONAL INTEGER" <> help "Pages end"))
 
+cmdUpdateArticleAuthor :: Parser Command
+cmdUpdateArticleAuthor = UpdateArticleAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Article id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+cmdUpdateThesis :: Parser Command
+cmdUpdateThesis = UpdateThesis
+  <$> argument auto (metavar "INTEGER" <> help "Thesis id")
+  <*> optional (strOption (metavar "STRING" <> help "Title"))
+  <*> optional (option auto (long "city-id" <> short 'c' <> metavar "OPTIONAL INTEGER" <> help "City id"))
+  <*> optional (option auto (long "conference-id" <> short 'o' <> metavar "OPTIONAL INTEGER" <> help "Conference id"))
+  <*> optional (option auto (long "year" <> short 'y' <> metavar "OPTIONAL INTEGER" <> help "Year"))
+  <*> optional (option auto (long "pages-start" <> short 's' <> metavar "OPTIONAL INTEGER" <> help "Pages start"))
+  <*> optional (option auto (long "pages-end" <> short 'e' <> metavar "OPTIONAL INTEGER" <> help "Pages end"))
+
+cmdUpdateThesisAuthor :: Parser Command
+cmdUpdateThesisAuthor = UpdateThesisAuthor
+  <$> argument auto (metavar "INTEGER" <> help "Thesis id")
+  <*> argument auto (metavar "INTEGER" <> help "Author id")
+
+
 
 commandParser :: Parser Command
 commandParser = subparser
@@ -764,6 +785,9 @@ commandParser = subparser
     <> command "update-book" (info (cmdUpdateBook <**> helper) (progDesc "Update book"))
     <> command "update-book-author" (info (cmdUpdateBookAuthor <**> helper) (progDesc "Update book-author pair"))
     <> command "update-article" (info (cmdUpdateArticle <**> helper) (progDesc "Update article"))
+    <> command "update-article-author" (info (cmdUpdateArticleAuthor <**> helper) (progDesc "Update article-author pair"))
+    <> command "update-thesis" (info (cmdUpdateThesis <**> helper) (progDesc "Update thesis"))
+    <> command "update-thesis-author" (info (cmdUpdateThesisAuthor <**> helper) (progDesc "Update thesis-author pair"))
   )
 
 programParser :: ParserInfo Command
