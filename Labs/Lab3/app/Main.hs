@@ -394,6 +394,75 @@ queryDeleteThesisAuthor connection id aId = do
   execute connection q (id, aId)
   print "Deleted thesis-author"
 
+queryUpdateAuthor :: Connection -> Integer -> String -> IO ()
+queryUpdateAuthor connection id name = do
+  let q = toQuery "UPDATE authors SET name = ? WHERE id = ?;"
+  execute connection q (name, id)
+  print "Updated author"
+
+queryUpdateCity :: Connection -> Integer -> String -> IO ()
+queryUpdateCity connection id name = do
+  let q = toQuery "UPDATE cities SET name = ? WHERE id = ?;"
+  execute connection q (name, id)
+  print "Updated city"
+
+queryUpdatePublisher :: Connection -> Integer -> String -> IO ()
+queryUpdatePublisher connection id name = do
+  let q = toQuery "UPDATE publishers SET name = ? WHERE id = ?;"
+  execute connection q (name, id)
+  print "Updated publisher"
+
+queryUpdateConference :: Connection -> Integer -> String -> IO ()
+queryUpdateConference connection id name = do
+  let q = toQuery "UPDATE conferences SET name = ? WHERE id = ?;"
+  execute connection q (name, id)
+  print "Updated conference"
+
+queryUpdateJournal :: Connection -> Integer -> String -> IO ()
+queryUpdateJournal connection id name = do
+  let q = toQuery "UPDATE journals SET name = ? WHERE id = ?;"
+  execute connection q (name, id)
+  print "Updated journal"
+
+queryUpdateBook :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateBook connection id title cId pId bYear = do
+  let _ = title >>= (\x -> Just (execute connection (toQuery "UPDATE books SET title = ? WHERE id = ?;") (x, id)))
+  let _ = cId >>= (\x -> Just (execute connection (toQuery "UPDATE books SET city_id = ? WHERE id = ?;") (x, id)))
+  let _ = pId >>= (\x -> Just (execute connection (toQuery "UPDATE books SET publisher_id = ? WHERE id = ?;") (x, id)))
+  let _ = bYear >>= (\x -> Just (execute connection (toQuery "UPDATE books SET year = ? WHERE id = ?;") (x, id)))
+  print "Updated book"
+
+queryUpdateBookAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateBookAuthor connection bId aId Nothing Nothing = do
+  print "Nothing updated to book-author"
+queryUpdateBookAuthor connection bId aId Nothing (Just naId) = do
+  let q = toQuery "UPDATE book_authors SET author_id = ? WHERE author_id = ? AND book_id = ?;"
+  execute connection q (naId, aId, bId)
+  print "Updated book-author"
+queryUpdateBookAuthor connection bId aId (Just nbId) Nothing = do
+  let q = toQuery "UPDATE book_authors SET book_id = ? WHERE author_id = ? AND book_id = ?;"
+  execute connection q (nbId, aId, bId)
+  print "Updated book-author"
+queryUpdateBookAuthor connection bId aId (Just nbId) (Just naId) = do
+  let q = toQuery "UPDATE book_authors SET book_id = ?, author_id = ? WHERE author_id = ? AND book_id = ?;"
+  execute connection q (nbId, naId, aId, bId)
+  print "Updated book-author"
+
+queryUpdateArticle :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateArticle connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd = do
+  let _ = aTitle >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id)))
+  let _ = aCityId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET city_id = ? WHERE id = ?;") (x, id)))
+  let _ = aConfId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET conference_id = ? WHERE id = ?;") (x, id)))
+  let _ = aPagesStart >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id)))
+  let _ = aPagesEnd >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id)))
+  print "Updated article"
+
+queryUpdateArticleAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateArticleAuthor connection bId aId nbId naId = do
+  let q = toQuery "UPDATE article_authors SET article_id = ? WHERE author_id = ?;"
+  execute connection q (bId, aId)
+  print "Updated article for author"
+
 data Command
   = TextTypesByName String
   | CountAllTextTypes
@@ -478,27 +547,42 @@ data Command
       upBookPublisherId :: Maybe Integer,
       upBookYear :: Maybe Integer
     }
-  | UpdateBookAuthor Integer Integer
+  | UpdateBookAuthor {
+      baBookId :: Integer,
+      baAuthorId :: Integer,
+      baNewBookId :: Maybe Integer,
+      baNewAuthorId :: Maybe Integer
+    }
   | UpdateArticle {
         upArticleId :: Integer,
         upArticleTitle :: Maybe String,
         upArticleJournalId :: Maybe Integer,
-        upArticleIssue :: Maybe Int,
-        upArticleYear :: Maybe Int,
-        upArticlePagesStart :: Maybe Int,
-        upArticlePagesEnd :: Maybe Int
+        upArticleIssue :: Maybe Integer,
+        upArticleYear :: Maybe Integer,
+        upArticlePagesStart :: Maybe Integer,
+        upArticlePagesEnd :: Maybe Integer
     }
-  | UpdateArticleAuthor Integer Integer
+  | UpdateArticleAuthor {
+      aaBookId :: Integer,
+      aaArticleId :: Integer,
+      aaNewArticleId :: Maybe Integer,
+      aaNewAuthorId :: Maybe Integer
+    }
   | UpdateThesis {
        upThesisId :: Integer,
        upThesisTitle :: Maybe String,
        upThesisCityId :: Maybe Integer,
        upThesisConferenceId :: Maybe Integer,
-       upThesisYear :: Maybe Int,
-       upThesisPagesStart :: Maybe Int,
-       upThesisPagesEnd :: Maybe Int
+       upThesisYear :: Maybe Integer,
+       upThesisPagesStart :: Maybe Integer,
+       upThesisPagesEnd :: Maybe Integer
    }
-  | UpdateThesisAuthor Integer Integer
+  | UpdateThesisAuthor {
+     taThesisId :: Integer,
+     taAuthorId :: Integer,
+     taNewThesisId :: Maybe Integer,
+     taNewAuthorId :: Maybe Integer
+   }
   deriving (Show, Generic)
 
 cmdTextTypesByName :: Parser Command
@@ -694,6 +778,8 @@ cmdUpdateBookAuthor :: Parser Command
 cmdUpdateBookAuthor = UpdateBookAuthor
   <$> argument auto (metavar "INTEGER" <> help "Book id")
   <*> argument auto (metavar "INTEGER" <> help "Author id")
+  <*> optional (option auto (long "new-book-id" <> short 'n' <> metavar "INTEGER" <> help "New book id"))
+  <*> optional (option auto (long "new-author-id" <> short 'a' <> metavar "INTEGER" <> help "New author id"))
 
 cmdUpdateArticle :: Parser Command
 cmdUpdateArticle = UpdateArticle
@@ -709,6 +795,8 @@ cmdUpdateArticleAuthor :: Parser Command
 cmdUpdateArticleAuthor = UpdateArticleAuthor
   <$> argument auto (metavar "INTEGER" <> help "Article id")
   <*> argument auto (metavar "INTEGER" <> help "Author id")
+  <*> optional (option auto (long "new-article-id" <> short 'n' <> metavar "INTEGER" <> help "New article id"))
+  <*> optional (option auto (long "new-author-id" <> short 'a' <> metavar "INTEGER" <> help "New author id"))
 
 cmdUpdateThesis :: Parser Command
 cmdUpdateThesis = UpdateThesis
@@ -724,6 +812,8 @@ cmdUpdateThesisAuthor :: Parser Command
 cmdUpdateThesisAuthor = UpdateThesisAuthor
   <$> argument auto (metavar "INTEGER" <> help "Thesis id")
   <*> argument auto (metavar "INTEGER" <> help "Author id")
+  <*> optional (option auto (long "new-thesis-id" <> short 'n' <> metavar "INTEGER" <> help "New thesis id"))
+  <*> optional (option auto (long "new-author-id" <> short 'a' <> metavar "INTEGER" <> help "New author id"))
 
 
 
@@ -839,6 +929,16 @@ executeCommand (DeleteArticle arId) connection = queryDeleteArticle connection a
 executeCommand (DeleteArticleAuthor arId aId) connection = queryDeleteArticleAuthor connection arId aId
 executeCommand (DeleteThesis tId) connection = queryDeleteThesis connection tId
 executeCommand (DeleteThesisAuthor tId aId) connection = queryDeleteThesisAuthor connection tId aId
+
+executeCommand (UpdateAuthor id name) connection = queryUpdateAuthor connection id name
+executeCommand (UpdateCity id name) connection = queryUpdateCity connection id name
+executeCommand (UpdatePublisher id name) connection = queryUpdatePublisher connection id name
+executeCommand (UpdateConference id name) connection = queryUpdateConference connection id name
+executeCommand (UpdateJournal id name) connection = queryUpdateJournal connection id name
+executeCommand (UpdateBook id title cId pId bYear) connection = queryUpdateBook connection id title cId pId bYear
+executeCommand (UpdateBookAuthor bId aId nbId naId) connection = queryUpdateBookAuthor connection bId aId nbId naId
+executeCommand (UpdateArticle id aTitle aCityId aConfId aYear aPagesStart aPagesEnd) connection = queryUpdateArticle connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd
+executeCommand (UpdateArticleAuthor bId aId nbId naId) connection = queryUpdateArticleAuthor connection bId aId nbId naId
 
 
 
