@@ -424,12 +424,18 @@ queryUpdateJournal connection id name = do
   execute connection q (name, id)
   print "Updated journal"
 
+maybeIObind :: Maybe a -> (a -> IO b) -> IO ()
+maybeIObind Nothing f = return ()
+maybeIObind (Just value) f = do
+  f value
+  return ()
+
 queryUpdateBook :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
 queryUpdateBook connection id title cId pId bYear = do
-  let _ = title >>= (\x -> Just (execute connection (toQuery "UPDATE books SET title = ? WHERE id = ?;") (x, id)))
-  let _ = cId >>= (\x -> Just (execute connection (toQuery "UPDATE books SET city_id = ? WHERE id = ?;") (x, id)))
-  let _ = pId >>= (\x -> Just (execute connection (toQuery "UPDATE books SET publisher_id = ? WHERE id = ?;") (x, id)))
-  let _ = bYear >>= (\x -> Just (execute connection (toQuery "UPDATE books SET year = ? WHERE id = ?;") (x, id)))
+  title `maybeIObind` (\x -> execute connection (toQuery "UPDATE books SET title = ? WHERE id = ?;") (x, id))
+  cId `maybeIObind` (\x -> execute connection (toQuery "UPDATE books SET city_id = ? WHERE id = ?;") (x, id))
+  pId `maybeIObind` (\x -> execute connection (toQuery "UPDATE books SET publisher_id = ? WHERE id = ?;") (x, id))
+  bYear `maybeIObind` (\x -> execute connection (toQuery "UPDATE books SET year = ? WHERE id = ?;") (x, id))
   print "Updated book"
 
 queryUpdateBookAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
@@ -450,12 +456,12 @@ queryUpdateBookAuthor connection bId aId (Just nbId) (Just naId) = do
 
 queryUpdateArticle :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
 queryUpdateArticle connection id aTitle jId iId aYear aPagesStart aPagesEnd = do
-  let _ = aTitle >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id)))
-  let _ = jId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET journal_id = ? WHERE id = ?;") (x, id)))
-  let _ = iId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET issue = ? WHERE id = ?;") (x, id)))
-  let _ = aYear >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET year = ? WHERE id = ?;") (x, id)))
-  let _ = aPagesStart >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id)))
-  let _ = aPagesEnd >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id)))
+  aTitle `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id))
+  jId `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET journal_id = ? WHERE id = ?;") (x, id))
+  iId `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET issue = ? WHERE id = ?;") (x, id))
+  aYear `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET year = ? WHERE id = ?;") (x, id))
+  aPagesStart `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id))
+  aPagesEnd `maybeIObind` (\x -> execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id))
   print "Updated article"
 
 queryUpdateArticleAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
@@ -476,12 +482,12 @@ queryUpdateArticleAuthor connection bId aId (Just nbId) (Just naId) = do
 
 queryUpdateThesis :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
 queryUpdateThesis connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd = do
-  let _ = aTitle >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id)))
-  let _ = aCityId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET city_id = ? WHERE id = ?;") (x, id)))
-  let _ = aConfId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET conference_id = ? WHERE id = ?;") (x, id)))
-  let _ = aYear >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET year = ? WHERE id = ?;") (x, id)))
-  let _ = aPagesStart >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id)))
-  let _ = aPagesEnd >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id)))
+  aTitle `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET title = ? WHERE id = ?;") (x, id))
+  aCityId `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET city_id = ? WHERE id = ?;") (x, id))
+  aConfId `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET conference_id = ? WHERE id = ?;") (x, id))
+  aYear `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET year = ? WHERE id = ?;") (x, id))
+  aPagesStart `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET pages_start = ? WHERE id = ?;") (x, id))
+  aPagesEnd `maybeIObind` (\x -> execute connection (toQuery "UPDATE theses SET pages_end = ? WHERE id = ?;") (x, id))
   print "Updated thesis"
 
 queryUpdateThesisAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
@@ -839,7 +845,7 @@ cmdUpdateArticleAuthor = UpdateArticleAuthor
 cmdUpdateThesis :: Parser Command
 cmdUpdateThesis = UpdateThesis
   <$> argument auto (metavar "INTEGER" <> help "Thesis id")
-  <*> optional (strOption (metavar "STRING" <> help "Title"))
+  <*> optional (strOption (long "title" <> short 't' <> metavar "STRING" <> help "Title"))
   <*> optional (option auto (long "city-id" <> short 'c' <> metavar "OPTIONAL INTEGER" <> help "City id"))
   <*> optional (option auto (long "conference-id" <> short 'o' <> metavar "OPTIONAL INTEGER" <> help "Conference id"))
   <*> optional (option auto (long "year" <> short 'y' <> metavar "OPTIONAL INTEGER" <> help "Year"))
