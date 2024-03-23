@@ -438,30 +438,68 @@ queryUpdateBookAuthor connection bId aId Nothing Nothing = do
 queryUpdateBookAuthor connection bId aId Nothing (Just naId) = do
   let q = toQuery "UPDATE book_authors SET author_id = ? WHERE author_id = ? AND book_id = ?;"
   execute connection q (naId, aId, bId)
-  print "Updated book-author"
+  print "Updated author_id in book-author"
 queryUpdateBookAuthor connection bId aId (Just nbId) Nothing = do
   let q = toQuery "UPDATE book_authors SET book_id = ? WHERE author_id = ? AND book_id = ?;"
   execute connection q (nbId, aId, bId)
-  print "Updated book-author"
+  print "Updated book_id in book-author"
 queryUpdateBookAuthor connection bId aId (Just nbId) (Just naId) = do
   let q = toQuery "UPDATE book_authors SET book_id = ?, author_id = ? WHERE author_id = ? AND book_id = ?;"
   execute connection q (nbId, naId, aId, bId)
-  print "Updated book-author"
+  print "Updated book_id and author_id in book-author"
 
 queryUpdateArticle :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
-queryUpdateArticle connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd = do
+queryUpdateArticle connection id aTitle jId iId aYear aPagesStart aPagesEnd = do
   let _ = aTitle >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id)))
-  let _ = aCityId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET city_id = ? WHERE id = ?;") (x, id)))
-  let _ = aConfId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET conference_id = ? WHERE id = ?;") (x, id)))
+  let _ = jId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET journal_id = ? WHERE id = ?;") (x, id)))
+  let _ = iId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET issue = ? WHERE id = ?;") (x, id)))
+  let _ = aYear >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET year = ? WHERE id = ?;") (x, id)))
   let _ = aPagesStart >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id)))
   let _ = aPagesEnd >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id)))
   print "Updated article"
 
 queryUpdateArticleAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
-queryUpdateArticleAuthor connection bId aId nbId naId = do
-  let q = toQuery "UPDATE article_authors SET article_id = ? WHERE author_id = ?;"
-  execute connection q (bId, aId)
-  print "Updated article for author"
+queryUpdateArticleAuthor connection bId aId Nothing Nothing = do
+  print "Nothing updated to article-author"
+queryUpdateArticleAuthor connection bId aId Nothing (Just naId) = do
+  let q = toQuery "UPDATE article_authors SET author_id = ? WHERE author_id = ? AND article_id = ?;"
+  execute connection q (naId, aId, bId)
+  print "Updated author_id in article-author"
+queryUpdateArticleAuthor connection bId aId (Just nbId) Nothing = do
+  let q = toQuery "UPDATE article_authors SET article_id = ? WHERE author_id = ? AND article_id = ?;"
+  execute connection q (nbId, aId, bId)
+  print "Updated article_id in article-author"
+queryUpdateArticleAuthor connection bId aId (Just nbId) (Just naId) = do
+  let q = toQuery "UPDATE article_authors SET article_id = ?, author_id = ? WHERE author_id = ? AND article_id = ?;"
+  execute connection q (nbId, naId, aId, bId)
+  print "Updated article_id and author_id in article-author"
+
+queryUpdateThesis :: Connection -> Integer -> Maybe String -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateThesis connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd = do
+  let _ = aTitle >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET title = ? WHERE id = ?;") (x, id)))
+  let _ = aCityId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET city_id = ? WHERE id = ?;") (x, id)))
+  let _ = aConfId >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET conference_id = ? WHERE id = ?;") (x, id)))
+  let _ = aYear >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET year = ? WHERE id = ?;") (x, id)))
+  let _ = aPagesStart >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_start = ? WHERE id = ?;") (x, id)))
+  let _ = aPagesEnd >>= (\x -> Just (execute connection (toQuery "UPDATE articles SET pages_end = ? WHERE id = ?;") (x, id)))
+  print "Updated thesis"
+
+queryUpdateThesisAuthor :: Connection -> Integer -> Integer -> Maybe Integer -> Maybe Integer -> IO ()
+queryUpdateThesisAuthor connection bId aId Nothing Nothing = do
+  print "Nothing updated to thesis-author"
+queryUpdateThesisAuthor connection bId aId Nothing (Just naId) = do
+  let q = toQuery "UPDATE thesis_authors SET author_id = ? WHERE author_id = ? AND thesis_id = ?;"
+  execute connection q (naId, aId, bId)
+  print "Updated author_id in thesis-author"
+queryUpdateThesisAuthor connection bId aId (Just nbId) Nothing = do
+  let q = toQuery "UPDATE thesis_authors SET thesis_id = ? WHERE author_id = ? AND thesis_id = ?;"
+  execute connection q (nbId, aId, bId)
+  print "Updated thesis_id in article-author"
+queryUpdateThesisAuthor connection bId aId (Just nbId) (Just naId) = do
+  let q = toQuery "UPDATE thesis_authors SET thesis_id = ?, author_id = ? WHERE author_id = ? AND thesis_id = ?;"
+  execute connection q (nbId, naId, aId, bId)
+  print "Updated thesis_id and author_id in thesis-author"
+
 
 data Command
   = TextTypesByName String
@@ -937,20 +975,7 @@ executeCommand (UpdateConference id name) connection = queryUpdateConference con
 executeCommand (UpdateJournal id name) connection = queryUpdateJournal connection id name
 executeCommand (UpdateBook id title cId pId bYear) connection = queryUpdateBook connection id title cId pId bYear
 executeCommand (UpdateBookAuthor bId aId nbId naId) connection = queryUpdateBookAuthor connection bId aId nbId naId
-executeCommand (UpdateArticle id aTitle aCityId aConfId aYear aPagesStart aPagesEnd) connection = queryUpdateArticle connection id aTitle aCityId aConfId aYear aPagesStart aPagesEnd
+executeCommand (UpdateArticle id aTitle jId iId aYear aPagesStart aPagesEnd) connection = queryUpdateArticle connection id aTitle jId iId aYear aPagesStart aPagesEnd
 executeCommand (UpdateArticleAuthor bId aId nbId naId) connection = queryUpdateArticleAuthor connection bId aId nbId naId
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+executeCommand (UpdateThesis id aTitle cId confId aYear aPagesStart aPagesEnd) connection = queryUpdateThesis connection id aTitle cId confId aYear aPagesStart aPagesEnd
+executeCommand (UpdateThesisAuthor bId aId nbId naId) connection = queryUpdateThesisAuthor connection bId aId nbId naId
